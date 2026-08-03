@@ -302,7 +302,7 @@ if hakunappi:
 
                         st.divider()
                         
-                        # --- TEKOÄLYN RAUHAVAHTI (LYHYEMPI VERSIO) ---
+                        # --- TEKOÄLYN RAUHAVAHTI ---
                         if ai_kaytossa:
                             with st.spinner("🤖 Rauhavahti analysoi vaunutilannetta..."):
                                 try:
@@ -320,7 +320,6 @@ if hakunappi:
                             if uusi_raportti:
                                 tallenna_raportti(t_num, uusi_raportti)
                                 st.success("Kiitos! Raportti tallennettiin.")
-                                st.rerun()
                         
                         tallennetut_raportit = hae_raportit(t_num)
                         if tallennetut_raportit:
