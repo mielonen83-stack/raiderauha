@@ -286,6 +286,18 @@ if hakunappi:
                         
                         asemat_matkalla = list(asemat_map.values())
                         
+                        # --- MONOTONINEN LUKITUSLOGIIKKA ---
+                        # Varmistetaan, että heti kun vastaan tulee ensimmäinen asema,
+                        # jota ei ole kuitattu (aktiivinen = False), kaikki sen jälkeiset
+                        # asemat pakotetaan pysymään odottavina (⏳).
+                        found_future = False
+                        for asema_info in asemat_matkalla:
+                            if found_future:
+                                asema_info["aktiivinen"] = False
+                            else:
+                                if not asema_info["aktiivinen"]:
+                                    found_future = True
+                        
                         if asemat_matkalla:
                             for asema_info in asemat_matkalla:
                                 tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
