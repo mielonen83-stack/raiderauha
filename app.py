@@ -51,7 +51,6 @@ if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
     if vastaus.status_code == 200:
         junat = vastaus.json()
         
-        # Varmistetaan, että saatu data on lista eikä virheviesti
         if not isinstance(junat, list):
             st.warning("Ei löytynyt suoria junia valitsemallesi välille tai aikataulutietoja ei ole saatavilla.")
         else:
@@ -97,8 +96,8 @@ if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
                     t_tyyppi = juna["tyyppi"]
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']}"):
-                        st.markdown("#### 🗺️ Visuaalinen vaunukartta")
-                        st.write("Junan kokoonpano veturista alkaen (⬅️ Etuosa / Veturi | Takaosa ➡️):")
+                        st.markdown("#### 🗺️ Junan vaunukartta")
+                        st.write("Junan kokoonpano veturista alkaen (⬅️ Veturi | Takaosa ➡️):")
                         
                         # Haetaan vaunut
                         vaunut = []
@@ -114,57 +113,33 @@ if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
                             pass
                         
                         if not vaunut:
-                            # Varakartta hienolla esityksellä
                             if t_tyyppi == "IC":
                                 vaunut = [
-                                    {"wagonType": "Edb (Ekstra)", "salesNumber": "1", "tyyppi": "ekstra"},
-                                    {"wagonType": "Ravintola", "salesNumber": "2", "tyyppi": "ravintola"},
-                                    {"wagonType": "InterCity", "salesNumber": "3", "tyyppi": "normaali"},
-                                    {"wagonType": "InterCity", "salesNumber": "4", "tyyppi": "normaali"},
-                                    {"wagonType": "InterCity", "salesNumber": "5", "tyyppi": "normaali"},
-                                    {"wagonType": "InterCity", "salesNumber": "6", "tyyppi": "normaali"},
-                                    {"wagonType": "InterCity", "salesNumber": "7", "tyyppi": "normaali"}
+                                    {"wagonType": "Edb (Ekstra)", "salesNumber": "1"},
+                                    {"wagonType": "Ravintola", "salesNumber": "2"},
+                                    {"wagonType": "InterCity", "salesNumber": "3"},
+                                    {"wagonType": "InterCity", "salesNumber": "4"},
+                                    {"wagonType": "InterCity", "salesNumber": "5"},
+                                    {"wagonType": "InterCity", "salesNumber": "6"},
+                                    {"wagonType": "InterCity", "salesNumber": "7"}
                                 ]
                             else:
                                 vaunut = [
-                                    {"wagonType": "Ravintola", "salesNumber": "1", "tyyppi": "ravintola"},
-                                    {"wagonType": "Vaunu", "salesNumber": "2", "tyyppi": "normaali"},
-                                    {"wagonType": "Vaunu", "salesNumber": "3", "tyyppi": "normaali"}
+                                    {"wagonType": "Ravintola", "salesNumber": "1"},
+                                    {"wagonType": "Vaunu", "salesNumber": "2"},
+                                    {"wagonType": "Vaunu", "salesNumber": "3"}
                                 ]
                         
-                        # Rakennetaan HTML-vaunujono
-                        html_vaunut = "<div style='display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; align-items: center;'>"
-                        
-                        # Lisätään veturi alkuun
-                        html_vaunut += "<div style='background-color: #333; color: white; padding: 12px 10px; border-radius: 8px; text-align: center; min-width: 70px; font-weight: bold; font-size: 12px;'>🚂<br><span style='font-size: 10px;'>Veturi</span></div>"
-                        
-                        for idx, v in enumerate(vaunut):
+                        # Piirretään vaunut Streamlitin omilla st.columns-sarakkeilla ja mittareilla
+                        cols = st.columns(len(vaunut) if len(vaunut) <= 8 else 8)
+                        for idx, v in enumerate(vaunut[:8]):
                             v_nimi = v.get('wagonType', 'Vaunu')
                             v_nro = v.get('salesNumber', str(idx+1))
-                            
-                            # Värikoodataan tyypin mukaan
-                            bg_color = "#1f77b4" # Sininen oletus
-                            v_lower = str(v_nimi).lower()
-                            if "ekstra" in v_lower or "edb" in v_lower:
-                                bg_color = "#2ca02c" # Vihreä ekstra-luokalle
-                            elif "ravintola" in v_lower or "eart" in v_lower or "rk" in v_lower:
-                                bg_color = "#ff7f0e" # Oranssi ravintolalle
-                                
-                            html_vaunut += f"""
-                            <div style='background-color: {bg_color}; color: white; padding: 10px 8px; border-radius: 6px; text-align: center; min-width: 80px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>
-                                <div style='font-size: 11px; font-weight: bold;'>Vaunu {v_nro}</div>
-                                <div style='font-size: 10px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>{v_nimi}</div>
-                            </div>
-                            """
-                        
-                        html_vaunut += "</div>"
-                        
-                        # Näytetään HTML Streamlitissa
-                        st.markdown(html_vaunut, unsafe_allow_html=True)
+                            with cols[idx]:
+                                st.metric(label=f"Vaunu {v_nro}", value=v_nimi)
                         
                         st.markdown("---")
-                        st.markdown("**Värikoodien selitykset:** 🟩 Vihreä = Ekstra-luokka (hiljainen), 🟧 Oranssi = Ravintolavaunu (vilkas), 🟦 Sininen = Normaalivaunu.")
-                        st.info("💡 **Rauhavinkki:** Valitse paikka keskimmäisistä sinisistä vaunuista. Vältä ravintolavaunun viereisiä vaunuja, jos haluat täydellisen levon.")
+                        st.info("💡 **Rauhavinkki:** Ekstra-luokka (vihreä/erikoismalli) tarjoaa hiljaisuutta. Vältä ravintolavaunun viereisiä vaunuja, jos haluat matkustaa ilman häiriöitä.")
 
     else:
         st.error("Virhe haettaessa junatietoja.")
