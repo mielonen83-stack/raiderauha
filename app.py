@@ -30,7 +30,7 @@ ga_script = f"""
     </script>
     <!-- SEO Meta Tags -->
     <meta name="description" content="Raiderauha on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja matkustajien live-raportit." />
-    <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka, matkabingo" />
+    <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka" />
 """
 components.html(ga_script, height=0, width=0)
 
@@ -128,20 +128,6 @@ if "paivan_vitsi" not in st.session_state:
 if "haku_tehty" not in st.session_state:
   st.session_state.haku_tehty = False
 
-# Matkabingon tilan alustus
-if "bingo_ruudut" not in st.session_state:
-  st.session_state.bingo_ruudut = {
-      "Pahoittelemme myöhästymistä": False,
-      "Kaiuttimen rätinä": False,
-      "Puhelin ilman kuulokkeita": False,
-      "Kahvikuppi nurin tai kaatuu": False,
-      "Kadonnut matkalippu": False,
-      "Lehmä ikkunasta bongattu": False,
-      "Konduktöörin syvä huokaus": False,
-      "Joku puhuu puheluun liian kovaa": False,
-      "Vessanovi ei meinaa mennä kiinni": False,
-  }
-
 try:
   client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
   ai_kaytossa = True
@@ -201,7 +187,6 @@ def hae_aseman_tiedotteet(asema_koodi):
   return []
 
 
-# --- UUSI: ASEMAN KAIKKI SAAPUVAT JA LÄHTEVÄT JUNAT ---
 @st.cache_data(ttl=60)
 def hae_aseman_junat(asema_koodi):
   url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{asema_koodi}?departure_date={date.today().strftime('%Y-%m-%d')}&limit=20"
@@ -214,10 +199,8 @@ def hae_aseman_junat(asema_koodi):
   return []
 
 
-# --- UUSI: RADAN SÄÄ- JA TUULITIEDOT (DIGITRAFFIC WEATHER) ---
 @st.cache_data(ttl=600)
 def hae_radan_saatiedot():
-  # Digitraffic tarjoaa säätietoja rajapinnan kautta
   url = "https://tie.digitraffic.fi/api/v1/data/weather-data"
   try:
     vastaus = requests.get(url, timeout=3)
@@ -228,7 +211,6 @@ def hae_radan_saatiedot():
   return []
 
 
-# --- HISTORIALLINEN LUOTETTAVUUS ---
 @st.cache_data(ttl=3600)
 def hae_junan_historia_luotettavuus(juna_numero):
   summa_minuutit = 0
@@ -258,7 +240,6 @@ def hae_junan_historia_luotettavuus(juna_numero):
   return (int(juna_numero) * 3) % 15
 
 
-# --- JUNAN REAALIAIKAINEN SIJAINTI JA NOPEUS ---
 @st.cache_data(ttl=30)
 def hae_junan_sijainti(juna_numero):
   url = f"https://rata.digitraffic.fi/api/v1/train-locations/latest/{juna_numero}"
@@ -286,7 +267,6 @@ for nimi, tiedot in asema_dict.items():
   koodi_to_nimi[tiedot["koodi"]] = nimi.split(" (")[0]
 
 
-# --- TEKOÄLYN LYHYT TERVEHDYS ---
 @st.cache_data(ttl=3600)
 def hae_tekoaly_tervehdys():
   if ai_kaytossa:
@@ -401,7 +381,6 @@ st.markdown(
 )
 st.divider()
 
-# --- UUSI VÄLILEHTI: ASEMAN KAIKKI JUNAT JA RADAN SÄÄ ---
 st.markdown("### 🚉 Aseman live-tilanne & Radan sää")
 a_tab1, a_tab2 = st.tabs(
     [
@@ -422,7 +401,6 @@ with a_tab1:
       t_num = aj.get("trainNumber")
       t_tyyppi = aj.get("trainType")
       cancelled = aj.get("cancelled", False)
-      # Etsitään lähtöaika tälle asemalle
       for r in aj.get("timeTableRows", []):
         if r.get("stationShortCode") == lahto and r.get("type") == "DEPARTURE":
           sch = r.get("scheduledTime")
@@ -466,36 +444,12 @@ with a_tab2:
 
 st.divider()
 
-# --- MATKABINGO-OSIO ---
-st.markdown("### 🎫 Junamatkustajan Matkabingo")
-st.markdown(
-    "*Bongaa klassisia junailmiöitä matkan varrelta ja rukskaa ruutuja!*"
-)
-
-b_col1, b_col2, b_col3 = st.columns(3)
-bingo_sarakkeet = [b_col1, b_col2, b_col3]
-
-for i, (tehtävä, tila) in enumerate(st.session_state.bingo_ruudut.items()):
-  col = bingo_sarakkeet[i % 3]
-  with col:
-    uusi_tila = st.checkbox(
-        tehtävä, value=tila, key=f"bingo_{i}", help="Rukskaa kun tapahtuu!"
-    )
-    st.session_state.bingo_ruudut[tehtävä] = uusi_tila
-
-if all(st.session_state.bingo_ruudut.values()):
-  st.balloons()
-  st.success("🎉 **BINGO!** Olet kokenut täydellisen suomalaisen junamatkan!")
-
-st.divider()
-
 if st.session_state.haku_tehty:
   st.markdown(
       f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔"
       f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
   )
 
-  # --- ASEMAN LIVE-KUULUTUKSET JA TIEDOTTEET ---
   st.markdown(
       f"📢 **Lähtöaseman ({valittu_lahto_nimi.split(' ')[0]}) ajankohtaiset"
       " laituritiedotteet & häiriöt:**"
@@ -511,7 +465,6 @@ if st.session_state.haku_tehty:
 
   st.divider()
 
-  # --- SÄÄ JA HIILIDIOKSIDISÄÄSTÖLASKURI ---
   l_lat = asema_dict[valittu_lahto_nimi].get("lat")
   l_lon = asema_dict[valittu_lahto_nimi].get("lon")
   p_lat = asema_dict[valittu_paikka_nimi].get("lat")
@@ -887,7 +840,6 @@ if st.session_state.haku_tehty:
 
             st.divider()
 
-            # --- LAAJENNETUT VAUNUKOHTAISET TIEDOT & PALVELUT ---
             st.markdown(
                 "#### 🗺️ Laajennettu vaunukartta ja tarkat palvelutietueet"
             )
@@ -968,7 +920,6 @@ if st.session_state.haku_tehty:
             for idx, v in enumerate(vaunut[:8]):
               v_nimi = v.get("wagonType", "Vaunu")
               v_nro = v.get("salesNumber", str(idx + 1))
-              # Tarkistetaan mahdolliset lisätiedot API-rakenteesta
               wifi_str = (
                   "📶 Wi-Fi" if v.get("wifi", True) else "🚫 Ei Wi-Fi"
               )
@@ -1007,5 +958,5 @@ else:
 st.markdown("---")
 with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
   st.markdown("""
-    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin, hyödyntää myöhästymiskorvausgeneraattoria, tarkistaa aseman live-tiedotteita tai junan historiallista luotettavuusindeksiä, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin, hyödyntää myöhästymiskorvausgeneraattoria, tarkistaa aseman live-tiedotteita tai junan historiallista luotettavuusindeksiä, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
     """)
