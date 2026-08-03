@@ -5,14 +5,16 @@ import requests
 import sqlite3
 import streamlit as st
 
-# Sivun perusasetukset
+# Sivun perusasetukset ja SEO-otsikko
 st.set_page_config(
-    page_title="Raiderauha – Älykäs Junatutka & Rauhavahti",
+    page_title=(
+        "Raiderauha – Reaaliaikainen Junatutka, Aikataulut & Rataliikennehäiriöt"
+    ),
     page_icon="🚆",
     layout="wide",
 )
 
-# --- GOOGLE ANALYTICS SEURANTA ---
+# --- GOOGLE ANALYTICS & SEO METATIEDOT ---
 GA_MEASUREMENT_ID = "G-ET3PWNZCXH"
 
 ga_script = f"""
@@ -23,6 +25,9 @@ ga_script = f"""
       gtag('js', new Date());
       gtag('config', '{GA_MEASUREMENT_ID}');
     </script>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Raiderauha on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sään ja matkustajien live-raportit." />
+    <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka, matkabingo" />
 """
 st.markdown(ga_script, unsafe_allow_html=True)
 
@@ -194,7 +199,7 @@ if hairiot:
     kuvaus = h.get("ingress", "")
     st.sidebar.warning(f"**{otsikko}**\n\n{kuvaus}")
 else:
-  st.sidebar.success("Ei tiedossa olevia rataliikennehäiriöitä.")
+  st.sidebar.success("Ei tiedossa olevia rataliikennehäiriötä.")
 
 st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
@@ -613,3 +618,10 @@ else:
       "👈 Valitse asemat ja matkustuspäivä sivupalkista, ja klikkaa **Etsi"
       " junat ja Rauhavahti**."
   )
+
+# --- HAKUKONEOPTIMOIDTU PIILOTETTU TEKSTI (SEO-avainsanat boteille) ---
+st.markdown("---")
+with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
+  st.markdown("""
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin junan tunnelmasta, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    """)
