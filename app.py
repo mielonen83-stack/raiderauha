@@ -2,8 +2,6 @@ import streamlit as st
 import requests
 from datetime import datetime
 from openai import OpenAI
-import folium
-from streamlit_folium import st_folium
 
 # Sivun perusasetukset
 st.set_page_config(
@@ -23,7 +21,7 @@ try:
 except:
     ai_kaytossa = False
 
-# Haetaan asemat koordinaatteineen Digitrafficin rajapinnasta
+# Haetaan asemat Digitrafficin rajapinnasta
 @st.cache_data
 def hae_asemat():
     url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
@@ -32,60 +30,37 @@ def hae_asemat():
         if vastaus.status_code == 200:
             asemat = vastaus.json()
             matkustajasektori = [a for a in asemat if a.get('passengerTraffic') == True]
-            asema_lista = {}
-            for a in matkustajasektori:
-                nimi = f"{a['stationName']} ({a['stationShortCode']})"
-                asema_lista[nimi] = {
-                    "koodi": a['stationShortCode'],
-                    "lat": a.get('latitude'),
-                    "lon": a.get('longitude')
-                }
+            asema_lista = {f"{a['stationName']} ({a['stationShortCode']})": a['stationShortCode'] for a in matkustajasektori}
             return asema_lista
     except:
         pass
-    return {
-        "Helsinki (HKI)": {"koodi": "HKI", "lat": 60.1719, "lon": 24.9414},
-        "Tampere (TPE)": {"koodi": "TPE", "lat": 61.5033, "lon": 23.7753},
-        "Oulu (OULU)": {"koodi": "OULU", "lat": 65.0124, "lon": 25.4682}
-    }
+    return {"Helsinki (HKI)": "HKI", "Tampere (TPE)": "TPE", "Turku (TKU)": "TKU", "Oulu (OULU)": "OULU"}
 
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
 # Sivupalkin hakuehdot
 st.sidebar.header("🎛️ Matkan tiedot")
-oletus_lahto_idx = asemat_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
-oletus_paikka_idx = asemat_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
+oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
+oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-lahto_info = asema_dict[valittu_lahto_nimi]
-paikka_info = asema_dict[valittu_paikka_nimi]
-
-lahto = lahto_info["koodi"]
-paikka = paikka_info["koodi"]
+lahto = asema_dict[valittu_lahto_nimi]
+paikka = asema_dict[valittu_paikka_nimi]
 
 if st.sidebar.button("🔍 Etsi junat ja rauha-alueet", type="primary"):
     
-    # 1. Kartta
-    st.markdown("### 🗺️ Reittikartta")
-    if lahto_info["lat"] and paikka_info["lat"]:
-        keski_lat = (lahto_info["lat"] + paikka_info["lat"]) / 2
-        keski_lon = (lahto_info["lon"] + paikka_info["lon"]) / 2
-        
-        m = folium.Map(location=[keski_lat, keski_lon], zoom_start=7, tiles="CartoDB positron")
-        folium.Marker([lahto_info["lat"], lahto_info["lon"]], popup=valittu_lahto_nimi, icon=folium.Icon(color="green", icon="play")).add_to(m)
-        folium.Marker([paikka_info["lat"], paikka_info["lon"]], popup=valittu_paikka_nimi, icon=folium.Icon(color="red", icon="stop")).add_to(m)
-        folium.PolyLine(locations=[[lahto_info["lat"], lahto_info["lon"]], [paikka_info["lat"], paikka_info["lon"]]], color="#1f77b4", weight=4, opacity=0.8).add_to(m)
-        st_folium(m, width="100%", height=350)
-    
+    # Siisti matkatieto-otsikko ilman karttasekoiluja
+    st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}**")
+    st.info("💡 Haetaan reaaliaikaisia junatietoja ja vaunukokoonpanoja Digitrafficista...")
     st.divider()
     
-    # 2. Junat
+    # Haetaan junat
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
     
-    with st.spinner("Haetaan junavuoroja..."):
+    with st.spinner("Haetaan junavuoroja ja tekoälyn analyysiä..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
@@ -168,7 +143,7 @@ if st.sidebar.button("🔍 Etsi junat ja rauha-alueet", type="primary"):
                             else:
                                 vaunut = [
                                     {"wagonType": "Ravintola", "salesNumber": "1"},
-                                    {"wagonType": "Vaunun", "salesNumber": "2"},
+                                    {"wagonType": "Vaunu", "salesNumber": "2"},
                                     {"wagonType": "Vaunu", "salesNumber": "3"}
                                 ]
                         
@@ -179,12 +154,11 @@ if st.sidebar.button("🔍 Etsi junat ja rauha-alueet", type="primary"):
                             with cols[idx]:
                                 st.metric(label=f"Vaunu {v_nro}", value=v_nimi)
                         
-                        # --- UUSI: YKSITTÄISEN VAUNUN SISÄINEN RAUHA-ALUEKARTTA ---
+                        # Vaunun sisäinen rauha-aluekartta
                         st.markdown("---")
                         st.markdown("#### 💺 Vaunun sisäinen rauha-kartta (Mistä löydät hiljaisuuden?)")
                         st.write("Tältä näyttää tyypillisen vaunun sisäinen dynamiikka päädystä päätyyn:")
                         
-                        # Piirretään graafinen vaunun sisäosa sarakkeilla
                         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
                         
                         with v_col1:
