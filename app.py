@@ -176,6 +176,19 @@ def hae_rautatie_hairiot():
 
 
 @st.cache_data(ttl=300)
+def hae_ratatyot_ja_nopeusrajoitukset():
+  # Haetaan radan häiriö- ja työtiedotteet / ratatyöt Fintrafficin rajapinnasta
+  url = "https://rata.digitraffic.fi/api/v1/messages?messageType=WORKS"
+  try:
+    vastaus = requests.get(url, timeout=3)
+    if vastaus.status_code == 200:
+      return vastaus.json()
+  except:
+    pass
+  return []
+
+
+@st.cache_data(ttl=300)
 def hae_aseman_tiedotteet(asema_koodi):
   url = "https://rata.digitraffic.fi/api/v1/messages"
   try:
@@ -303,7 +316,20 @@ if hairiot:
     kuvaus = h.get("ingress", "")
     st.sidebar.warning(f"**{otsikko}**\n\n{kuvaus}")
 else:
-  st.sidebar.success("Ei tiedossa olevia rataliikennehäiriöitä.")
+  st.sidebar.success("Ei tiedossa olevia rataliikennehäiriötä.")
+
+st.sidebar.divider()
+st.sidebar.markdown("### 🚧 Ratatyöt & hidastukset")
+ratatyot = hae_ratatyot_ja_nopeusrajoitukset()
+if ratatyot:
+  for tyy in ratatyot[:2]:
+    t_ots = tyy.get("title", "Ratatyö / Nopeusrajoitus")
+    t_ing = tyy.get("ingress", "Radalla tehdään kunnossapitotöitä.")
+    st.sidebar.info(f"🛠️ **{t_ots}**\n\n{t_ing}")
+else:
+  st.sidebar.caption(
+      "Ei aktiivisia ilmoitetuita ratatöitä tai hidastuksia tällä hetkellä."
+  )
 
 st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
@@ -1009,5 +1035,5 @@ else:
 st.markdown("---")
 with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
   st.markdown("""
-    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin, hyödyntää myöhästymiskorvausgeneraattoria, tarkistaa aseman live-tiedotteita tai junan historiallista luotettavuusindeksiä, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt**, **ratatyöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin, hyödyntää myöhästymiskorvausgeneraattoria, tarkistaa aseman live-tiedotteita tai junan historiallista luotettavuusindeksiä, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
     """)
