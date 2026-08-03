@@ -244,7 +244,7 @@ if hakunappi:
             if not aktiiviset_junat:
                 st.warning("⚠️ Valitsemallesi päivälle ei löytynyt enää aktiivisia/tulevia vuoroja tällä välillä.")
             else:
-                st.success(f"Löytyi {len(aktiiviset_junat)} junavuoroa!")
+                st.success(f"Löytyi {len(aktiiviset_junat)} junavuoroja!" if len(aktiiviset_junat) > 1 else "Löytyi 1 junavuoro!")
                 
                 for juna in aktiiviset_junat:
                     t_num = juna["numero"]
@@ -267,8 +267,6 @@ if hakunappi:
                             if naytetaan and s_koodi:
                                 a_aika = rivi.get('scheduledTime')
                                 myohassa = rivi.get('differenceInMinutes', 0)
-                                
-                                # Tarkistetaan vain todellisen toteutuneen ajan perusteella (actualTime)
                                 onko_mennyt = rivi.get('actualTime') is not None
                                 
                                 if a_aika:
@@ -279,7 +277,8 @@ if hakunappi:
                                             "asema": s_koodi,
                                             "aika": klo,
                                             "myohassa": myohassa,
-                                            "aktiivinen": onko_mennyt
+                                            "aktiivinen": onko_mennyt,
+                                            "dt": dt_obj
                                         }
                                     else:
                                         if onko_mennyt:
@@ -289,6 +288,18 @@ if hakunappi:
                                 break
                         
                         asemat_matkalla = list(asemat_map.values())
+                        
+                        # Varmistetaan looginen eteneminen: kun jupustetaan yli ilman tulevaisuuden häröjä,
+                        # määritetään vihreiksi vain ne asemat, jotka ovat ennen ensimmäistä ei-vielä-ohitettua asemaa,
+                        # TAI joille on selkeä actualTime.
+                        # Tehdään tiukka tarkistus: jos jokin asema on merkitty ohitetuksi, varmistetaan johdonmukaisuus.
+                        found_future = False
+                        for asema_info in asemat_matkalla:
+                            if found_future:
+                                asema_info["aktiivinen"] = False
+                            else:
+                                if not asema_info["aktiivinen"]:
+                                    found_future = True
                         
                         if asemat_matkalla:
                             for asema_info in asemat_matkalla:
