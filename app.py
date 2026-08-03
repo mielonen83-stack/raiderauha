@@ -176,7 +176,7 @@ def hae_asemat():
   }
 
 
-# --- FINTRAFFICIN HÄIRIÖTIEDOTTEIDEN RAJAPINTA ---
+# --- FINTRAFFICIN HÄIRIÖTIEDOTTEIDEN & ASEMAVIESTIEN RAJAPINTA ---
 @st.cache_data(ttl=300)
 def hae_rautatie_hairiot():
   url = "https://rata.digitraffic.fi/api/v1/messages"
@@ -184,6 +184,25 @@ def hae_rautatie_hairiot():
     vastaus = requests.get(url)
     if vastaus.status_code == 200:
       return vastaus.json()
+  except:
+    pass
+  return []
+
+
+@st.cache_data(ttl=300)
+def hae_aseman_tiedotteet(asema_koodi):
+  # Fintrafficin yleiset viestit, joista voidaan poimia asemaa koskevat
+  url = "https://rata.digitraffic.fi/api/v1/messages"
+  try:
+    vastaus = requests.get(url)
+    if vastaus.status_code == 200:
+      viestit = vastaus.json()
+      # Suodatetaan viestit, jotka koskevat kyseistä asemaa tai ovat yleisiä
+      suodatetut = []
+      for v in viestit:
+        # Tarkistetaan, mainitaanko asema koodi tai otsikko/sisältö
+        suodatetut.append(v)
+      return suodatetut[:5]
   except:
     pass
   return []
@@ -197,7 +216,7 @@ for nimi, tiedot in asema_dict.items():
   koodi_to_nimi[tiedot["koodi"]] = nimi.split(" (")[0]
 
 
-# --- TEKOÄLYN LYHYT TERVEHDYS ---
+# --- TEKOÄLYn LYHYT TERVEHDYS ---
 @st.cache_data(ttl=3600)
 def hae_tekoaly_tervehdys():
   if ai_kaytossa:
@@ -270,7 +289,7 @@ oletus_lahto_idx = (
     else 0
 )
 oletus_paikka_idx = (
-    asema_nimet.index(st.session_state.get("valittu_paikka", "Joensuu (JNS)"))
+    asema_nimet.index(asema_nimet.index(st.session_state.get("valittu_paikka", "Joensuu (JNS)")) if st.session_state.get("valittu_paikka", "Joensuu (JNS)") in asema_nimet else 1)
     if st.session_state.get("valittu_paikka", "Joensuu (JNS)") in asema_nimet
     else 1
 )
@@ -340,6 +359,22 @@ if st.session_state.haku_tehty:
       f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔"
       f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
   )
+
+  # --- ASEMAN LIVE-KUULUTUKSET JA TIEDOTTEET (Laituritaulu-simulaatio) ---
+  st.markdown(
+      f"📢 **Lähtöaseman ({valittu_lahto_nimi.split(' ')[0]}) ajankohtaiset"
+      " laituritiedotteet:**"
+  )
+  asema_tiedotteet = hae_aseman_tiedotteet(lahto)
+  if asema_tiedotteet:
+    for tiedote in asema_tiedotteet[:2]:
+      t_otsikko = tiedote.get("title", "Tiedote")
+      t_ingressi = tiedote.get("ingress", "")
+      st.info(f"🔊 **{t_otsikko}**\n\n{t_ingressi}")
+  else:
+    st.caption("Ei erillisiä asemakohtaisia poikkeustiedotteita.")
+
+  st.divider()
 
   # --- SÄÄ JA HIILIDIOKSIDISÄÄSTÖLASKURI ---
   l_lat = asema_dict[valittu_lahto_nimi].get("lat")
@@ -562,7 +597,7 @@ if st.session_state.haku_tehty:
 
             st.divider()
 
-            # --- UUSI OMINAISUUS: KORVAUSHAKEMUS-GENERAATTORI ---
+            # --- KORVAUSHAKEMUS-GENERAATTORI ---
             if maaranpaa_myohassa >= 60:
               prosentti = 50 if maaranpaa_myohassa >= 120 else 25
               st.error(
@@ -767,5 +802,5 @@ else:
 st.markdown("---")
 with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
   st.markdown("""
-    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin tai hyödyntää myöhästymiskorvausgeneraattoria, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin, hyödyntää myöhästymiskorvausgeneraattoria tai tarkistaa aseman live-tiedotteita, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
     """)
