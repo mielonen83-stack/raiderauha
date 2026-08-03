@@ -1,19 +1,23 @@
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from openai import OpenAI
 
 # Sivun perusasetukset
 st.set_page_config(
-    page_title="Raiderauha – Reaaliaikainen junatutka", 
+    page_title="Raiderauha – Älykäs Junatutka & Rauhavahti", 
     page_icon="🚆", 
     layout="wide"
 )
 
 st.title("🚆 Raiderauha")
-st.markdown("##### *Reaaliaikainen junatutka, tekoäly ja vaunujen rauha-alueet*")
+st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet ja matkustajien live-raportit*")
 st.divider()
+
+# Alustetaan muisti matkustajien rauharaporteille sessionstateen
+if "rauharaportit" not in st.session_state:
+    st.session_state.rauharaportit = {} # Muodossa: {junanumero: [viestit]}
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
@@ -41,32 +45,40 @@ asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
 # Sivupalkin hakuehdot
-st.sidebar.header("🎛️ Matkan tiedot")
+st.sidebar.header("🎛️ Matkan tiedot & Kalenteri")
 oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
 oletus_paikka_idx = asema_nimet.index("Joensuu (JNS)") if "Joensuu (JNS)" in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
+# UUSI: Päivämääräkalenteri
+valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
+
 lahto = asema_dict[valittu_lahto_nimi]
 paikka = asema_dict[valittu_paikka_nimi]
 
-if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
+if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
     
-    st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}**")
-    st.info("📡 Suodatetaan tarkasti vain tämän päivän tulevat ja kulkevat vuorot...")
+    st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
+    st.info("📡 Haetaan aikatauluja ja Digitrafficin reaaliaikatietoja...")
     st.divider()
     
-    url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
+    # Digitrafficin päiväkohtainen haku muotoa YYYY-MM-DD
+    pvm_str = valittu_pvm.strftime('%Y-%m-%d')
+    url = f"https://rata.digitraffic.fi/api/v1/schedules/{lahto}/{paikka}/{pvm_str}"
     
-    with st.spinner("Haetaan junavuoroja..."):
-        vastaus = requests.get(url)
+    # Fallback live-hakuun jos kyse on tästä päivästä
+    live_url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
+    
+    with st.spinner("Etsitään sopivia junavuoroja..."):
+        vastaus = requests.get(live_url if valittu_pvm == date.today() else url)
     
     if vastaus.status_code == 200:
         junat = vastaus.json()
         
-        if not isinstance(junat, list):
-            st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
+        if not isinstance(junat, list) or not junat:
+            st.warning("⚠️ Valitsemallesi päivälle ja välille ei löytynyt suoria junavuoroja.")
         else:
             aktiiviset_junat = []
             suomi_aika = ZoneInfo("Europe/Helsinki")
@@ -99,12 +111,14 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                             saapumis_aika_str = dt_obj.strftime('%H:%M')
                             saapumis_dt = dt_obj
                 
-                # TARKISTUS: Otetaan mukaan vain ne junat, joiden päivämäärä on TÄNÄÄN JA lähtöaika on tulevaisuudessa (tai juna kulkee nyt)
                 if lahto_dt and saapumis_dt:
-                    is_today = lahto_dt.date() == nyt.date()
+                    is_today = valittu_pvm == date.today()
                     
-                    if is_today and (lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt)):
-                        if nyt < lahto_dt:
+                    # Jos kyseessä on tuleva päivä tai tämän päivän tuleva/kulkeva juna
+                    if not is_today or (lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt)):
+                        if not is_today:
+                            tila = f"📅 Päivämäärä {valittu_pvm.strftime('%d.%m.')}"
+                        elif nyt < lahto_dt:
                             tila = "⏳ Lähtee pian"
                         else:
                             tila = "🟢 Juuri nyt matkalla"
@@ -119,9 +133,9 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                         })
             
             if not aktiiviset_junat:
-                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet tai huomisen junat eivät näy vielä).")
+                st.warning("⚠️ Ei löytynyt aktiivisia vuoroja tälle päivälle tällä hetkellä.")
             else:
-                st.success(f"Löytyi {len(aktiiviset_junat)} tulevaa / matkassa olevaa junaa tälle päivälle!")
+                st.success(f"Löytyi {len(aktiiviset_junat)} junavuoroa!")
                 
                 for juna in aktiiviset_junat:
                     t_num = juna["numero"]
@@ -130,7 +144,7 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']} ({status_teksti})"):
                         
-                        st.markdown("#### 📍 Tulevat pysähdykset ja reitti")
+                        st.markdown("#### 📍 Junan aikataulu ja myöhästymiset")
                         
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
@@ -170,7 +184,7 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                             for idx, asema_info in enumerate(asemat_matkalla[:6]):
                                 with cols[idx]:
                                     tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
-                                    myoha_str = f" (+{asema_info['myohassa']} min)" if asema_info["myohassa"] > 0 else ""
+                                    myoha_str = f" (+{asema_info['myohassa']} min)" if asema_info['myohassa'] > 0 else ""
                                     st.metric(
                                         label=f"{tila_emoji} {asema_info['asema']}",
                                         value=asema_info["aika"],
@@ -179,15 +193,38 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                         
                         st.divider()
                         
+                        # --- TEKOÄLYN RAUHAVAHTI ---
                         if ai_kaytossa:
-                            with st.spinner("🤖 Tekoäly analysoi junaa..."):
+                            with st.spinner("🤖 Tekoälyn Rauhavahti analysoi junaa..."):
                                 try:
-                                    prompt = f"Olet VR:n matkaoppaan assistentti. Anna lyhyt ja oivaltava rauhallisuussuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}."
+                                    prompt = f"Olet VR:n matkaoppaan assistentti (Rauhavahti). Anna lyhyt ja oivaltava rauhoittava arvio ja vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}."
                                     completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=150)
-                                    st.info(f"🤖 **Tekoälyn rauharaportti:**\n\n{completion.choices[0].message.content}")
+                                    st.info(f"🤖 **Tekoälyn Rauhavahti-analyysi:**\n\n{completion.choices[0].message.content}")
                                 except:
                                     pass
                         
+                        # --- JOUKOISTETUT MATKUSTAJIEN RAUHARAPORTIT ---
+                        st.markdown("#### 🗣️ Matkustajien live-rauharaportit")
+                        
+                        # Lomake omien havaintojen lähettämiseen
+                        uusi_raportti = st.text_input(f"Ilmoita tunnelma tai vaunutieto tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 on superhiljainen, vaunu 5 täynnä porukkaa")
+                        if st.button("Lähetä raportti", key=f"btn_{t_num}"):
+                            if uusi_raportti:
+                                if t_num not in st.session_state.rauharaportit:
+                                    st.session_state.rauharaportit[t_num] = []
+                                st.session_state.rauharaportit[t_num].append(uusi_raportti)
+                                st.success("Kiitos! Raporttisi lisättiin muiden nähtäväksi.")
+                        
+                        # Näytetään olemassa olevat raportit
+                        if t_num in st.session_state.rauharaportit and st.session_state.rauharaportit[t_num]:
+                            for r in st.session_state.rauharaportit[t_num]:
+                                st.write(f"💬 *\"{r}\"*")
+                        else:
+                            st.caption("Ei vielä matkustajien raportteja tälle junalle. Ole ensimmäinen!")
+                        
+                        st.divider()
+                        
+                        # --- VAUNUKARTTA ---
                         st.markdown("#### 🗺️ Vaunukartta ja sisäiset rauha-alueet")
                         
                         vaunut = []
@@ -246,4 +283,4 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
     else:
         st.error("Virhe haettaessa junatietoja.")
 else:
-    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi tulevat junat ja seuranta**.")
+    st.info("👈 Valitse asemat ja matkustuspäivä sivupalkista, ja klikkaa **Etsi junat ja Rauhavahti**.")
