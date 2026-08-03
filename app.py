@@ -405,8 +405,17 @@ if st.session_state.haku_tehty:
                     if asema_info["myohassa"] > 0
                     else ""
                 )
+
+                # Muunnetaan lyhenne kokonaiseksi nimeksi
+                lyhenne = asema_info["asema"]
+                kokonainen_nimi = lyhenne
+                for nimi, tiedot in asema_dict.items():
+                  if tiedot["koodi"] == lyhenne:
+                    kokonainen_nimi = nimi.split(" (")[0]
+                    break
+
                 st.write(
-                    f"{tila_emoji} **{asema_info['asema']}** – klo"
+                    f"{tila_emoji} **{kokonainen_nimi}** – klo"
                     f" {asema_info['aika']}{myoha_str}"
                 )
 
