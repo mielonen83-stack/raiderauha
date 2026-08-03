@@ -83,7 +83,6 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                 lahto_dt = None
                 saapumis_dt = None
                 
-                # Etsitään oikeat lähtö- ja saapumisajat tälle nimenomaiselle välille
                 for rivi in timeTable:
                     if rivi.get('stationShortCode') == lahto and rivi.get('type') == 'DEPARTURE':
                         aika_str = rivi.get('scheduledTime')
@@ -96,25 +95,26 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                             saapumis_aika_str = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
                             saapumis_dt = datetime.fromisoformat(aika_str.replace('Z', '+00:00'))
                 
-                # TARKISTUS: Otetaan mukaan VAIN ne junat, joiden saapumisaika määränpäähän on TÄSSÄ HETKESSÄ TAI TULEVAISUUDESSA
-                if lahto_dt and saapumis_dt and saapumis_dt >= nyt:
-                    
-                    if nyt < lahto_dt:
-                        tila = "⏳ Lähtee pian"
-                    else:
-                        tila = "🟢 Juuri nyt matkalla"
+                # TIukka tarkistus: Otetaan mukaan VAIN ne junat, joiden LÄHTÖAIKA on tulevaisuudessa (tai juna on tällä hetkellä matkalla)
+                if lahto_dt and saapumis_dt:
+                    if lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt):
+                        
+                        if nyt < lahto_dt:
+                            tila = "⏳ Lähtee pian"
+                        else:
+                            tila = "🟢 Juuri nyt matkalla"
 
-                    aktiiviset_junat.append({
-                        "numero": train_num,
-                        "tyyppi": train_type,
-                        "lahto": lahto_aika_str,
-                        "saapuminen": saapumis_aika_str,
-                        "aikataulu": timeTable,
-                        "tila": tila
-                    })
+                        aktiiviset_junat.append({
+                            "numero": train_num,
+                            "tyyppi": train_type,
+                            "lahto": lahto_aika_str,
+                            "saapuminen": saapumis_aika_str,
+                            "aikataulu": timeTable,
+                            "tila": tila
+                        })
             
             if not aktiiviset_junat:
-                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet perille).")
+                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet).")
             else:
                 st.success(f"Löytyi {len(aktiiviset_junat)} tulevaa / matkassa olevaa junaa!")
                 
@@ -130,7 +130,6 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
                         
-                        # Suodatetaan aikataulusta vain ne asemat, jotka ovat lähtöaseman jälkeen
                         naytetaan = False
                         for rivi in timeTable:
                             s_koodi = rivi.get('stationShortCode')
