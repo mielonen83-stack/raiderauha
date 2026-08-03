@@ -60,21 +60,21 @@ def hae_asemat():
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
-# --- TEKOÄLYN TERVEHDYS ---
+# --- TEKOÄLYN HAUSKA TERVEHDYS ---
 @st.cache_data(ttl=3600)
 def hae_tekoaly_tervehdys():
     if ai_kaytossa:
         try:
-            prompt = "Kirjoita erittäin lyhyt, 1-2 lauseen pituinen lämmin, rennon ystävällinen ja iloinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen."
+            prompt = "Kirjoita lyhyt, 1-2 lauseen pituinen hauska, itseironinen ja hyväntuulinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen. Viittaa vaikka myöhästymisiin tai kovaäänisiin kanssamatkustajiin huumorilla."
             vastaus = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=60
+                max_tokens=70
             )
             return vastaus.choices[0].message.content
         except:
             pass
-    return "Tervetuloa Raiderauhaan! Löydä matkallesi paras juna ja rauhallisin vaunu. 🚆✨"
+    return "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään ja kaiman kännykkäpeli on äänettömällä. 🚆😂"
 
 tekoaly_tervehdys = hae_tekoaly_tervehdys()
 
@@ -265,18 +265,18 @@ if hakunappi:
                         # --- JATKOYHTEYKSIEN TARKISTUS ---
                         viimeinen_asema = asemat_matkalla[-1] if asemat_matkalla else None
                         if viimeinen_asema and viimeinen_asema["myohassa"] > 0:
-                            st.warning(f"⚠️ **Vaihdot vaarassa:** Juna on tällä hetkellä noin {viimeinen_asema['myohassa']} minuuttia myöhässä perille saapuessa. Tarkista jatkoyhteydet!")
+                            st.warning(f"⚠️ **Vaihdot vaarassa:** Juna on tällä hetkellä noin {viimeinen_asema['myohassa']} minuuttia myöhässä perille saapuessa. Juoksujalkaa vaihtoon!")
                         else:
-                            st.success("✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussaan, vaihto jatkokulkuun sujuu hyvin.")
+                            st.success("✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussaan, ehtii ehkä jopa kahville.")
 
                         st.divider()
                         
-                        # --- TEKOÄLYN RAUHAVAHTI ---
+                        # --- TEKOÄLYN RAUHAVAHTI (HUUMORIVERSIO) ---
                         if ai_kaytossa:
-                            with st.spinner("🤖 Tekoälyn Rauhavahti analysoi junaa..."):
+                            with st.spinner("🤖 Tekoälyn Rauhavahti analysoi hermojen kestävyyttä..."):
                                 try:
-                                    prompt = f"Olet VR:n matkaoppaan assistentti (Rauhavahti). Anna lyhyt ja oivaltava rauhoittava arvio ja vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}."
-                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=150)
+                                    prompt = f"Olet sarkastinen ja hauska matkaoppaan assistentti (Rauhavahti). Anna lyhyt, humoristinen ja oivaltava vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}, varoita mahdollisista häiriötekijöistä (kuten itkevät lapset, kovaääniset puhelupuhujat tai kahvilavaunun ruuhkat) ja heitä pieni vitsi."
+                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=160)
                                     st.info(f"🤖 **Tekoälyn Rauhavahti-analyysi:**\n\n{completion.choices[0].message.content}")
                                 except:
                                     pass
@@ -346,7 +346,7 @@ if hakunappi:
                         
                         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
                         with v_col1:
-                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas*")
+                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas ja tuoksuva*")
                         with v_col2:
                             st.warning("🟠 **Päätypaikat**\n\n*Melko vilkas*")
                         with v_col3:
@@ -354,7 +354,7 @@ if hakunappi:
                         with v_col4:
                             st.warning("🟠 **Päätypaikat**\n\n*Melko vilkas*")
                         with v_col5:
-                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas*")
+                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas ja tuoksuva*")
 
     else:
         st.error("Virhe haettaessa junatietoja.")
