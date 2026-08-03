@@ -192,7 +192,6 @@ def hae_rautatie_hairiot():
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
-# Luodaan käänteinen hakemisto koodista nimeen nopeutta varten
 koodi_to_nimi = {}
 for nimi, tiedot in asema_dict.items():
   koodi_to_nimi[tiedot["koodi"]] = nimi.split(" (")[0]
@@ -227,7 +226,6 @@ tekoaly_tervehdys = hae_tekoaly_tervehdys()
 st.sidebar.markdown(f'🤖 *"{tekoaly_tervehdys}"*')
 st.sidebar.divider()
 
-# Viralliset rataliikennehäiriöt Fintrafficin rajapinnasta
 st.sidebar.markdown("### 🚨 Viralliset rataliikennehäiriöt")
 hairiot = hae_rautatie_hairiot()
 if hairiot:
@@ -300,7 +298,6 @@ hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
 if hakunappi:
   st.session_state.haku_tehty = True
 
-# Lähdemerkintä sivupalkin alareunaan (Fintraffic / Digitraffic CC BY 4.0)
 st.sidebar.divider()
 st.sidebar.caption(
     "Tiedot: [Fintraffic / Digitraffic"
@@ -362,9 +359,8 @@ if st.session_state.haku_tehty:
     except:
       pass
 
-  # Lasketaan etäisyys koordinaattien avulla (Haversine-kaava) ja CO2-säästö
   if l_lat and l_lon and p_lat and p_lon:
-    R = 6371  # Maapallon säde kilometreinä
+    R = 6371
     dLat = radians(p_lat - l_lat)
     dLon = radians(p_lon - l_lon)
     a = sin(dLat / 2) ** 2 + cos(radians(l_lat)) * cos(radians(p_lat)) * sin(
@@ -372,13 +368,9 @@ if st.session_state.haku_tehty:
     ) ** 2
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     etaisyys_km = R * c
-
-    # Kerrotaan kertoimella 1.2, koska maantiet/raiteet eivät mene täsmälleen linnuntietä
     todellinen_arvio_km = etaisyys_km * 1.2
-
-    # Keskimääräiset päästöt: Auto n. 120 g CO2 / km, sähköjuna Suomessa lähes 0 g
     auton_paastot_kg = (todellinen_arvio_km * 120) / 1000
-    saastetty_co2 = auton_paastot_kg  # Koska sähköjunan päästöt ovat mitättömät
+    saastetty_co2 = auton_paastot_kg
 
     st.info(
         f"🌱 **Hiilijalanjälkilaskuri:** Valitsemalla junan auton sijaan"
@@ -492,6 +484,7 @@ if st.session_state.haku_tehty:
 
             timeTable = juna["aikataulu"]
             asemat_map = {}
+            maaranpaa_myohassa = 0
 
             naytetaan = False
             for rivi in timeTable:
@@ -507,6 +500,9 @@ if st.session_state.haku_tehty:
                 a_aika = rivi.get("scheduledTime")
                 myohassa = rivi.get("differenceInMinutes", 0)
                 onko_mennyt = rivi.get("actualTime") is not None
+
+                if s_koodi == paikka and rivi.get("type") == "ARRIVAL":
+                  maaranpaa_myohassa = myohassa
 
                 if a_aika:
                   dt_obj = datetime.fromisoformat(
@@ -539,7 +535,7 @@ if st.session_state.haku_tehty:
                 tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
                 myoha_str = (
                     f" (+{asema_info['myohassa']} min myöhässä)"
-                    if asema_info["myohassa"] > 0
+                    if asema_info['myohassa'] > 0
                     else ""
                 )
 
@@ -565,6 +561,42 @@ if st.session_state.haku_tehty:
               )
 
             st.divider()
+
+            # --- UUSI OMINAISUUS: KORVAUSHAKEMUS-GENERAATTORI ---
+            if maaranpaa_myohassa >= 60:
+              prosentti = 50 if maaranpaa_myohassa >= 120 else 25
+              st.error(
+                  f"🚨 **Myöhästymiskorvausoikeus aktivoitunut!** Juna on"
+                  f" myöhässä perillä {maaranpaa_myohassa} min. Olet oikeutettu"
+                  f" **{prosentti}%** hyvitykseen lipun hinnasta! (VR:n"
+                  " vakiokorvaus)"
+              )
+
+              hakemus_teksti = (
+                  f"Hei VR Asiakaspalvelu,\n\n"
+                  f"Haen korvausta matkalipustani EU:n rautatievastuuasetuksen"
+                  f" mukaisesti.\n\n"
+                  f"Matkatiedot:\n"
+                  f"- Junavuoro: {t_tyyppi} {t_num}\n"
+                  f"- Reitti: {valittu_lahto_nimi.split(' ')[0]} ➔"
+                  f" {valittu_paikka_nimi.split(' ')[0]}\n"
+                  f"- Matkustuspäivä: {valittu_pvm.strftime('%d.%m.%Y')}\n"
+                  f"- Myöhästyminen perillä: noin {maaranpaa_myohassa} minuuttia"
+                  f" ({prosentti}% hyvitys lipun hinnasta)\n\n"
+                  f"Pyydän palauttamaan korvauksen ilmoitetulle tililleni."
+                  f" Kiitos!\n\n"
+                  f"Ystävällisin terveisin,\n[Nimesi]"
+              )
+
+              st.markdown(
+                  "📋 **Valmis korvaushakemusteksti VR:lle (kopioi alta):**"
+              )
+              st.code(hakemus_teksti, language="text")
+              st.markdown(
+                  "[Siirry täyttämään virallinen VR:n korvauslomake"
+                  " täältä](https://www.vr.fi/hae-korvausta)"
+              )
+              st.divider()
 
             # --- TEKOÄLYN RAUHAVAHTI ---
             if ai_kaytossa:
@@ -731,9 +763,9 @@ else:
       " junat ja Rauhavahti**."
   )
 
-# --- HAKUKONEOPTIMOIDTU PIILOTETTU TEKSTI (SEO-avainsanat boteille) ---
+# --- SEO-PIILOTETTU TEKSTI ---
 st.markdown("---")
 with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
   st.markdown("""
-    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin tai chat-viestin junan tunnelmasta, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin, chat-viestin tai hyödyntää myöhästymiskorvausgeneraattoria, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
     """)
