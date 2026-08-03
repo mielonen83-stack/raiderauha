@@ -4,14 +4,13 @@ from datetime import datetime
 
 # Sivun perusasetukset
 st.set_page_config(
-    page_title="Raiderauha – Visuaalinen junatutka", 
+    page_title="Raiderauha – Täydellinen vaunukartalla", 
     page_icon="🚆", 
     layout="wide"
 )
 
-# Tyylikäs yläpalkki / otsikko
 st.title("🚆 Raiderauha")
-st.markdown("##### *Visuaalinen työkalu rauhallisen ja sujuvan junamatkan suunnitteluun*")
+st.markdown("##### *Älykäs junatutka vaunukartoilla varustettuna*")
 st.divider()
 
 # Haetaan asemat Digitrafficin rajapinnasta
@@ -34,9 +33,6 @@ asema_nimet = list(asema_dict.keys())
 
 # Sivupalkin hakuehdot
 st.sidebar.header("🎛️ Matkan tiedot")
-st.sidebar.markdown("Valitse reitti, jolle haluat etsiä rauhallisen junapaikan.")
-
-# Korjattu muuttujan nimi (asema_nimet)
 oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
 oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
 
@@ -46,17 +42,15 @@ valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=
 lahto = asema_dict[valittu_lahto_nimi]
 paikka = asema_dict[valittu_paikka_nimi]
 
-# Hakunappi
-if st.sidebar.button("🔍 Hae junat ja tilastot", type="primary"):
+if st.sidebar.button("🔍 Etsi junat ja vaunukartat", type="primary"):
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
     
-    with st.spinner(f"Haetaan grafiikoita ja junatietoja välille {valittu_lahto_nimi} – {valittu_paikka_nimi}..."):
+    with st.spinner("Haetaan junia ja kokoonpanoja..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
         junat = vastaus.json()
         
-        # Suodatetaan perutut pois
         aktiiviset_junat = []
         for juna in junat:
             if juna.get('cancelled', False):
@@ -64,6 +58,7 @@ if st.sidebar.button("🔍 Hae junat ja tilastot", type="primary"):
             
             train_num = juna.get('trainNumber')
             train_type = juna.get('trainType')
+            
             timeTable = juna.get('timeTableRows', [])
             lahto_aika = ""
             saapumis_aika = ""
@@ -80,47 +75,54 @@ if st.sidebar.button("🔍 Hae junat ja tilastot", type="primary"):
             
             if lahto_aika and saapumis_aika:
                 aktiiviset_junat.append({
-                    "numero": f"{train_type} {train_num}",
+                    "numero": train_num,
+                    "tyyppi": train_type,
                     "lahto": lahto_aika,
-                    "saapuminen": saapumis_aika,
-                    "tyyppi": train_type
+                    "saapuminen": saapumis_aika
                 })
         
         if not aktiiviset_junat:
-            st.warning(f"Ei löytynyt suoria junia välille {valittu_lahto_nimi} -> {valittu_paikka_nimi} tällä hetkellä.")
+            st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
         else:
-            # Visuaaliset mittarit (Metrics) yläosaan
-            st.markdown("### 📊 Reitin yleiskatsaus")
-            m1, m2, m3 = st.columns(3)
-            m1.metric(label="Löytyneet vuorot", value=f"{len(aktiiviset_junat)} kpl")
-            m2.metric(label="Ensimmäinen lähtö", value=aktiiviset_junat[0]["lahto"])
-            m3.metric(label="Viimeinen lähtö", value=aktiiviset_junat[-1]["lahto"])
+            st.success(f"Löytyi {len(aktiiviset_junat)} junaa!")
             
-            st.divider()
-            st.markdown("### 🚆 Junavuorot ja rauhallisuuden arviot")
-            
-            # Käydään vuorot läpi grafiikoiden kanssa
             for juna in aktiiviset_junat:
-                with st.expander(f"🚆 {juna['numero']} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']}"):
-                    col1, col2, col3 = st.columns([2, 2, 1])
+                t_num = juna["numero"]
+                t_tyyppi = juna["tyyppi"]
+                
+                with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']}"):
+                    st.markdown("#### 🗺️ Junan vaunukartta ja rauhallisuus")
+                    st.write("Vaunujärjestys veturista alkaen (Etuosa ➔ Takaosa):")
                     
-                    with col1:
-                        st.markdown("**Matkan tiedot:**")
-                        st.write(f"• Lähtö: **{valittu_lahto_nimi}** klo **{juna['lahto']}**")
-                        st.write(f"• Perillä: **{valittu_paikka_nimi}** klo **{juna['saapuminen']}**")
-                    
-                    with col2:
-                        st.markdown("**Rauhallisuusindeksi:**")
-                        st.progress(75, text="Välivaihe: Hiljainen / Mukava")
-                        st.write("💡 *Vinkki: Keskivaunut tarjoavat yleensä vähiten läpikulkuliikennettä.*")
+                    # Haetaan dynaamisesti junan kokoonpano Digitrafficista
+                    komp_url = f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
+                    try:
+                        komp_vastaus = requests.get(komp_url)
+                        if komp_vastaus.status_code == 200:
+                            komp_data = komp_vastaus.json()
+                            vaunut = komp_data.get('journeySections', [{}])[0].get('wagons', [])
+                            
+                            if vaunut:
+                                # Piirretään vaunut visuaalisesti Streamlitin pylväinä
+                                cols = st.columns(len(vaunut) if len(vaunut) <= 10 else 10)
+                                for idx, vaunu in enumerate(vaunut[:10]):
+                                    v_tyyppi = vaunu.get('wagonType', 'Vaunu')
+                                    v_nro = vaunu.get('salesNumber', idx+1)
+                                    with cols[idx]:
+                                        st.metric(label=f"Vaunu {v_nro}", value=v_tyyppi)
+                                if len(vaunut) > 10:
+                                    st.info(f"Junassa on yhteensä {len(vaunut)} vaunua.")
+                            else:
+                                st.info("Vaunukarttatietoja ei ole vielä päivitetty tälle junalle.")
+                        else:
+                            st.info("Kokoonpanotietoa ei saatavilla.")
+                    except:
+                        st.info("Vaunukartan hakevassa rajapinnassa oli häiriö.")
                         
-                    with col3:
-                        st.markdown("**Valinta:**")
-                        if st.button("Valitse", key=f"btn_{juna['numero']}"):
-                            st.toast(f"Valitsit junan {juna['numero']}! Hyvää matkaa rauhaan.")
+                    st.markdown("---")
+                    st.info("💡 **Rauhavinkki:** Valitse vaunu, joka sijaitsee mahdollisimman kaukana ravintolavaunusta tai leikkipaikasta. Ekstra-luokan vaunu tarjoaa parhaan hiljaisuuden.")
 
     else:
-        st.error(f"Virhe tiedon haussa (koodi {vastaus.status_code}). Yritä hetken päästä uudelleen.")
+        st.error("Virhe haettaessa junatietoja.")
 else:
-    # Aloitusnäyttö ennen hakua
-    st.info("👈 Valitse sivupalkista lähtö- ja määränpääasema, ja klikkaa **Hae junat ja tilastot**.")
+    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja vaunukartat**.")
