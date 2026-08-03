@@ -11,12 +11,18 @@ st.set_page_config(
     layout="wide"
 )
 
-# Alustetaan muistit sessionstateen
+# Alustetaan session_state muuttujat
 if "rauharaportit" not in st.session_state:
     st.session_state.rauharaportit = {}
 
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
+
+# --- KÄVIJÄLASKURI ---
+if "kavijat" not in st.session_state:
+    st.session_state.kavijat = 1
+else:
+    st.session_state.kavijat += 1
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
@@ -54,7 +60,28 @@ def hae_asemat():
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
+# --- TEKOÄLYN TERVEHDYS ---
+@st.cache_data(ttl=3600)
+def hae_tekoaly_tervehdys():
+    if ai_kaytossa:
+        try:
+            prompt = "Kirjoita erittäin lyhyt, 1-2 lauseen pituinen lämmin, rennon ystävällinen ja iloinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen."
+            vastaus = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=60
+            )
+            return vastaus.choices[0].message.content
+        except:
+            pass
+    return "Tervetuloa Raiderauhaan! Löydä matkallesi paras juna ja rauhallisin vaunu. 🚆✨"
+
+tekoaly_tervehdys = hae_tekoaly_tervehdys()
+
 # --- SIVUPALKKI & ASETUKSET ---
+st.sidebar.markdown(f"🤖 *\"{tekoaly_tervehdys}\"*")
+st.sidebar.divider()
+
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
 # Pikavalinnat / Suosikit
@@ -86,6 +113,11 @@ paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
 hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
 
+# Kävijälaskurin näyttäminen sivupalkin alaosassa
+st.sidebar.divider()
+st.sidebar.caption(f"👀 **Sivukatselut tässä istunnossa:** {st.session_state.kavijat}")
+
+# --- PÄÄSIVU ---
 st.title("🚆 Raiderauha")
 st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet, sää ja matkustajien live-raportit*")
 st.divider()
