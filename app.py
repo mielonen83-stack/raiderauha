@@ -189,7 +189,7 @@ def hae_aseman_tiedotteet(asema_koodi):
 
 @st.cache_data(ttl=60)
 def hae_aseman_junat(asema_koodi):
-  url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{asema_koodi}?departure_date={date.today().strftime('%Y-%m-%d')}&limit=20"
+  url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{asema_koodi}"
   try:
     vastaus = requests.get(url, timeout=3)
     if vastaus.status_code == 200:
