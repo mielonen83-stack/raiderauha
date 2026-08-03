@@ -86,6 +86,18 @@ def hae_asemat():
         "Tampere (TPE)": {"koodi": "TPE", "lat": 61.5033, "lon": 23.7733}
     }
 
+# --- FINTRAFFICIN HÄIRIÖTIEDOTTEIDEN RAJAPINTA ---
+@st.cache_data(ttl=300)
+def hae_rautatie_hairiot():
+    url = "https://rata.digitraffic.fi/api/v1/messages"
+    try:
+        vastaus = requests.get(url)
+        if vastaus.status_code == 200:
+            return vastaus.json()
+    except:
+        pass
+    return []
+
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
@@ -111,6 +123,18 @@ tekoaly_tervehdys = hae_tekoaly_tervehdys()
 st.sidebar.markdown(f"🤖 *\"{tekoaly_tervehdys}\"*")
 st.sidebar.divider()
 
+# Viralliset rataliikennehäiriöt Fintrafficin rajapinnasta
+st.sidebar.markdown("### 🚨 Viralliset rataliikennehäiriöt")
+hairiot = hae_rautatie_hairiot()
+if hairiot:
+    for h in hairiot[:3]:
+        otsikko = h.get('title', 'Häiriö')
+        kuvaus = h.get('ingress', '')
+        st.sidebar.warning(f"**{otsikko}**\n\n{kuvaus}")
+else:
+    st.sidebar.success("Ei tiedossa olevia rataliikennehäiriöitä.")
+
+st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
 if st.sidebar.button("🃏 Arvo uusi matkavitsi", use_container_width=True):
