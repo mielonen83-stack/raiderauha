@@ -12,6 +12,20 @@ st.set_page_config(
     layout="wide",
 )
 
+# --- GOOGLE ANALYTICS SEURANTA ---
+GA_MEASUREMENT_ID = "G-ET3PWNZCXH"
+
+ga_script = f"""
+    <script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){{dataLayer.push(arguments);}}
+      gtag('js', new Date());
+      gtag('config', '{GA_MEASUREMENT_ID}');
+    </script>
+"""
+st.markdown(ga_script, unsafe_allow_html=True)
+
 
 # --- TIETOKANNAN ALUSTUS ---
 def alusta_tietokanta():
@@ -243,6 +257,13 @@ hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
 
 if hakunappi:
   st.session_state.haku_tehty = True
+
+# Lähdemerkintä sivupalkin alareunaan (Fintraffic / Digitraffic CC BY 4.0)
+st.sidebar.divider()
+st.sidebar.caption(
+    "Tiedot: [Fintraffic / Digitraffic"
+    " (CC 4.0 BY)](https://www.digitraffic.fi) & Open-Meteo."
+)
 
 # --- PÄÄSIVU ---
 st.title("🚆 Raiderauha")
