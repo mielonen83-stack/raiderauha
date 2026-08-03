@@ -4,6 +4,8 @@ import sqlite3
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from openai import OpenAI
+import folium
+from streamlit_folium import st_folium
 
 # Sivun perusasetukset
 st.set_page_config(
@@ -226,6 +228,7 @@ if st.session_state.haku_tehty:
                 train_num = juna.get('trainNumber')
                 train_type = juna.get('trainType')
                 timeTable = juna.get('timeTableRows', [])
+                junan_sijainti = juna.get('location') # Otetaan talteen live-sijainti
                 
                 lahto_aika_str = ""
                 saapumis_aika_str = ""
@@ -263,6 +266,7 @@ if st.session_state.haku_tehty:
                             "lahto": lahto_aika_str,
                             "saapuminen": saapumis_aika_str,
                             "aikataulu": timeTable,
+                            "sijainti": junan_sijainti,
                             "tila": tila
                         })
             
@@ -277,6 +281,24 @@ if st.session_state.haku_tehty:
                     status_teksti = juna["tila"]
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']} ({status_teksti})"):
+                        
+                        # --- JUNICAN LIVE-KARTTASEURANTA ---
+                        st.markdown("#### 🗺️ Junan live-sijainti kartalla")
+                        junan_sijainti = juna.get("sijainti")
+                        if junan_sijainti and 'coordinates' in junan_sijainti:
+                            lon, lat = junan_sijainti['coordinates']
+                            m = folium.Map(location=[lat, lon], zoom_start=9)
+                            folium.Marker(
+                                [lat, lon],
+                                popup=f"Juna {t_tyyppi} {t_num}",
+                                tooltip=f"Juna {t_num}",
+                                icon=folium.Icon(color="red", icon="train", prefix="fa")
+                            ).add_to(m)
+                            st_folium(m, width=700, height=350, key=f"map_{t_num}")
+                        else:
+                            st.info("📍 Junan tarkkaa GPS-sijaintia ei ole tällä hetkellä saatavilla (juna saattaa olla asemalla tai ei vielä liikkeellä).")
+                        
+                        st.divider()
                         st.markdown("#### 📍 Junan koko reitin reaaliaikainen aikataulu")
                         
                         timeTable = juna["aikataulu"]
