@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import sqlite3
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from openai import OpenAI
@@ -11,9 +12,40 @@ st.set_page_config(
     layout="wide"
 )
 
-# Alustetaan session_state muuttujat
-if "rauharaportit" not in st.session_state:
-    st.session_state.rauharaportit = {}
+# --- TIETOKANNAN ALUSTUS ---
+def alusta_tietokanta():
+    yhteys = sqlite3.connect("rauharaportit.db")
+    kursori = yhteys.cursor()
+    kursori.execute("""
+        CREATE TABLE IF NOT EXISTS raportit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            juna_numero TEXT,
+            raportti TEXT,
+            aika TEXT
+        )
+    """)
+    yhteys.commit()
+    yhteys.close()
+
+alusta_tietokanta()
+
+# Apufunktiot tietokannan käyttöön
+def tallenna_raportti(juna_numero, raportti_teksti):
+    yhteys = sqlite3.connect("rauharaportit.db")
+    kursori = yhteys.cursor()
+    aikaleima = datetime.now(ZoneInfo("Europe/Helsinki")).strftime("%d.%m.%Y klo %H:%M")
+    kursori.execute("INSERT INTO raportit (juna_numero, raportti, aika) VALUES (?, ?, ?)", 
+                    (str(juna_numero), raportti_teksti, aikaleima))
+    yhteys.commit()
+    yhteys.close()
+
+def hae_raportit(juna_numero):
+    yhteys = sqlite3.connect("rauharaportit.db")
+    kursori = yhteys.cursor()
+    kursori.execute("SELECT raportti, aika FROM raportit WHERE juna_numero = ? ORDER BY id DESC", (str(juna_numero),))
+    tulokset = kursori.fetchall()
+    yhteys.close()
+    return tulokset
 
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
@@ -81,7 +113,6 @@ st.sidebar.divider()
 
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
-# Pikavalinnat / Suosikit
 if st.sidebar.button("🃏 Arvo uusi matkavitsi", use_container_width=True):
     if ai_kaytossa:
         try:
@@ -112,7 +143,6 @@ oletus_paikka_idx = asema_nimet.index(st.session_state.get("valittu_paikka", "Jo
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-# Tallenna suosikkeihin -painike
 if st.sidebar.button("❤️ Tallenna suosikkireitiksi"):
     uusi_suosikki = (valittu_lahto_nimi, valittu_paikka_nimi)
     if uusi_suosikki not in st.session_state.suosikit:
@@ -135,7 +165,6 @@ if hakunappi:
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
     
-    # HAE SÄÄÄNNÖT MÄÄRÄNPÄÄHÄN
     p_lat = asema_dict[valittu_paikka_nimi].get("lat")
     p_lon = asema_dict[valittu_paikka_nimi].get("lon")
     if p_lat and p_lon:
@@ -290,22 +319,22 @@ if hakunappi:
                                 except:
                                     pass
                         
-                        # --- JOUKOISTETUT MATKUSTAJIEN RAUHARAPORTIT ---
-                        st.markdown("#### 🗣️ Matkustajien live-rauharaportit")
+                        # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT ---
+                        st.markdown("#### 🗣️ Matkustajien live-rauharaportit (Tietokanta)")
                         
                         uusi_raportti = st.text_input(f"Ilmoita tunnelma tai vaunutieto tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 on superhiljainen, vaunu 5 täynnä porukkaa")
-                        if st.button("Lähetä raportti", key=f"btn_{t_num}"):
+                        if st.button("Lähetä raportti tietokantaan", key=f"btn_{t_num}"):
                             if uusi_raportti:
-                                if t_num not in st.session_state.rauharaportit:
-                                    st.session_state.rauharaportit[t_num] = []
-                                st.session_state.rauharaportit[t_num].append(uusi_raportti)
-                                st.success("Kiitos! Raporttisi lisättiin muiden nähtäväksi.")
+                                tallenna_raportti(t_num, uusi_raportti)
+                                st.success("Kiitos! Raportti tallennettiin tietokantaan pysyvästi.")
+                                st.rerun()
                         
-                        if t_num in st.session_state.rauharaportit and st.session_state.rauharaportit[t_num]:
-                            for r in st.session_state.rauharaportit[t_num]:
-                                st.write(f"💬 *\"{r}\"*")
+                        tallennetut_raportit = hae_raportit(t_num)
+                        if tallennetut_raportit:
+                            for r_teksti, r_aika in tallennetut_raportit:
+                                st.write(f"💬 *\"{r_teksti}\"* — <small style='color: gray;'>({r_aika})</small>", unsafe_allow_html=True)
                         else:
-                            st.caption("Ei vielä matkustajien raportteja tälle junalle. Ole ensimmäinen!")
+                            st.caption("Ei vielä raportteja tässä tietokannassa. Kirjoita ensimmäinen!")
                         
                         st.divider()
                         
