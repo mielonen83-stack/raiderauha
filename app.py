@@ -293,7 +293,7 @@ for j_nro in st.session_state.seuratut_junat:
 
 st.sidebar.divider()
 
-st.sidebar.markdown("### ♿ Palvelusuodattimet hakulle")
+st.sidebar.markdown("### ♿ Palvelusuodattimet")
 vaadi_pyora = st.sidebar.checkbox("🚲 Pyöräpaikka vaaditaan")
 vaadi_lemmikki = st.sidebar.checkbox("🐾 Lemmikkivaunu vaaditaan")
 vaadi_esteeton = st.sidebar.checkbox("♿ Esteetön vaunu vaaditaan")
@@ -391,7 +391,6 @@ with st.sidebar.form("palaute_lomake"):
                 palaute_tyyppi,
                 palaute_teksti,
             ]
-            # Tallennetaan väliaikaishakemistoon, jotta toimii pilvessä (Streamlit Cloud)
             palaute_tiedosto = os.path.join("/tmp", "palautteet.csv")
             try:
                 file_exists = os.path.exists(palaute_tiedosto)
