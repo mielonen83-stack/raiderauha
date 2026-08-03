@@ -52,6 +52,9 @@ if "suosikit" not in st.session_state:
 if "paivan_vitsi" not in st.session_state:
     st.session_state.paivan_vitsi = "Miksi juna pysähtyi keskelle metsää? – Konduktööri unohti pyyhkiä pyyhkijät pois päältä! 🚂💨"
 
+if "haku_tehty" not in st.session_state:
+    st.session_state.haku_tehty = False
+
 try:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ai_kaytossa = True
@@ -152,12 +155,15 @@ paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
 hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
 
+if hakunappi:
+    st.session_state.haku_tehty = True
+
 # --- PÄÄSIVU ---
 st.title("🚆 Raiderauha")
 st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet, sää ja matkustajien live-raportit*")
 st.divider()
 
-if hakunappi:
+if st.session_state.haku_tehty:
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
     
     p_lat = asema_dict[valittu_paikka_nimi].get("lat")
@@ -167,7 +173,7 @@ if hakunappi:
             sää_url = f"https://api.open-meteo.com/v1/forecast?latitude={p_lat}&longitude={p_lon}&current=temperature_2m,weather_code"
             s_vast = requests.get(sää_url).json()
             lampo = s_vast['current']['temperature_2m']
-            st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}:** {lampo}°C")
+            st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}):** {lampo}°C")
         except:
             pass
 
@@ -312,16 +318,19 @@ if hakunappi:
                                 except:
                                     pass
                         
-                        # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT (LOMAKE) ---
+                        # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT ---
                         st.markdown("#### 🗣️ Matkustajien live-rauharaportit (Tietokanta)")
                         
                         with st.form(key=f"form_{t_num}"):
                             uusi_raportti = st.text_input(f"Ilmoita tunnelma tälle junalle ({t_num}):", placeholder="Esim. Vaunu 3 superhiljainen")
                             submit_nappi = st.form_submit_button("Lähetä raportti tietokantaan")
                             
-                            if submit_nappi and uusi_raportti:
-                                tallenna_raportti(t_num, uusi_raportti)
-                                st.success("Kiitos! Raportti tallennettiin.")
+                            if submit_nappi:
+                                if uusi_raportti:
+                                    tallenna_raportti(t_num, uusi_raportti)
+                                    st.success("Kiitos! Raportti tallennettiin.")
+                                else:
+                                    st.warning("Kirjoita ensin jotain raporttiin.")
                         
                         tallennetut_raportit = hae_raportit(t_num)
                         if tallennetut_raportit:
