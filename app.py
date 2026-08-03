@@ -4,14 +4,14 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from openai import OpenAI
 
-# Sivun perusasetukset ja teeman tarkistus
+# Sivun perusasetukset
 st.set_page_config(
     page_title="Raiderauha – Älykäs Junatutka & Rauhavahti", 
     page_icon="🚆", 
     layout="wide"
 )
 
-# Alustetaan muistit sessionstateen
+# Alustetaan muistit sessionstateen oikein heti alussa
 if "rauharaportit" not in st.session_state:
     st.session_state.rauharaportit = {}
 
@@ -25,7 +25,7 @@ try:
 except:
     ai_kaytossa = False
 
-# Haetaan asemat Digitrafficin rajapinnasta (mukaan lukien koordinaatit säätä varten)
+# Haetaan asemat Digitrafficin rajapinnasta
 @st.cache_data
 def hae_asemat():
     url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
@@ -66,10 +66,10 @@ if teema == "Tumma tila (Dark)":
         </style>
     """, unsafe_allow_html=True)
 
-# Pikavalinnat / Suosikit
-if st.sidebar.session_state.suosikit:
+# Pikavalinnat / Suosikit (korjattu kutsu: st.session_state)
+if st.session_state.suosikit:
     st.sidebar.markdown("### ⭐ Suosikkireitit")
-    for idx, (s_lahto, s_paikka) in enumerate(st.sidebar.session_state.suosikit):
+    for idx, (s_lahto, s_paikka) in enumerate(st.session_state.suosikit):
         if st.sidebar.button(f"{s_lahto} ➔ {s_paikka}", key=f"suosikki_{idx}"):
             st.session_state.valittu_lahto = s_lahto
             st.session_state.valittu_paikka = s_paikka
@@ -117,7 +117,7 @@ if hakunappi:
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
     
-    # --- HAE SÄÄÄNNÖT MÄÄRÄNPÄÄHÄN (Open-Meteo API) ---
+    # HAE SÄÄÄNNÖT MÄÄRÄNPÄÄHÄN
     p_lat = asema_dict[valittu_paikka_nimi].get("lat")
     p_lon = asema_dict[valittu_paikka_nimi].get("lon")
     if p_lat and p_lon:
