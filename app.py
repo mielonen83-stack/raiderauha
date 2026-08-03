@@ -36,8 +36,9 @@ asema_nimet = list(asema_dict.keys())
 st.sidebar.header("🎛️ Matkan tiedot")
 st.sidebar.markdown("Valitse reitti, jolle haluat etsiä rauhallisen junapaikan.")
 
-oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asemat_nimet else 0
-oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asemat_nimet else 1
+# Korjattu muuttujan nimi (asema_nimet)
+oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
+oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
@@ -110,7 +111,6 @@ if st.sidebar.button("🔍 Hae junat ja tilastot", type="primary"):
                     
                     with col2:
                         st.markdown("**Rauhallisuusindeksi:**")
-                        # Tehdään visuaalinen edistymispalkki (simuloitu rauha-arvio)
                         st.progress(75, text="Välivaihe: Hiljainen / Mukava")
                         st.write("💡 *Vinkki: Keskivaunut tarjoavat yleensä vähiten läpikulkuliikennettä.*")
                         
