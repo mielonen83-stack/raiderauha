@@ -862,9 +862,36 @@ if st.session_state.haku_tehty:
 
             if veturit:
               v_tyypit = [v.get("locomotiveType", "Veturiyksikkö") for v in veturit]
-              st.info(
-                  f"🚂 **Veturiyksikkö vetämässä junaa:** {', '.join(v_tyypit)}"
+              veturi_maara = len(veturit)
+              veturi_teksti = (
+                  f"kahdella veturilla ({', '.join(v_tyypit)})"
+                  if veturi_maara > 1
+                  else f"veturilla ({', '.join(v_tyypit)})"
               )
+              if t_tyyppi == "S":
+                st.info(
+                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) – Sähkömoottorijuna."
+                )
+              elif t_tyyppi in ["HL", "H"]:
+                st.info(
+                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5) – Moottorijunayksikkö."
+                )
+              else:
+                st.info(f"🚂 **Veturitiedot:** Junaa vedetään {veturi_teksti}.")
+            else:
+              if t_tyyppi == "S":
+                st.info(
+                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) – Sähkömoottorijuna."
+                )
+              elif t_tyyppi in ["HL", "H"]:
+                st.info(
+                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5) – Moottorijunayksikkö."
+                )
+              else:
+                st.info(
+                    "🚂 **Veturitiedot:** Ei erillisiä veturitietoja"
+                    " saatavilla."
+                )
 
             if not vaunut:
               if t_tyyppi == "IC":
@@ -874,30 +901,40 @@ if st.session_state.haku_tehty:
                         "salesNumber": "1",
                         "wifi": True,
                         "pet": False,
+                        "accessible": True,
+                        "bicycle": True,
                     },
                     {
                         "wagonType": "Ravintola",
                         "salesNumber": "2",
                         "wifi": True,
                         "pet": False,
+                        "accessible": True,
+                        "bicycle": False,
                     },
                     {
                         "wagonType": "InterCity",
                         "salesNumber": "3",
                         "wifi": True,
                         "pet": True,
+                        "accessible": False,
+                        "bicycle": True,
                     },
                     {
                         "wagonType": "InterCity",
                         "salesNumber": "4",
                         "wifi": True,
                         "pet": False,
+                        "accessible": False,
+                        "bicycle": False,
                     },
                     {
                         "wagonType": "InterCity",
                         "salesNumber": "5",
                         "wifi": True,
                         "pet": False,
+                        "accessible": True,
+                        "bicycle": True,
                     },
                 ]
               else:
@@ -907,12 +944,16 @@ if st.session_state.haku_tehty:
                         "salesNumber": "1",
                         "wifi": True,
                         "pet": False,
+                        "accessible": True,
+                        "bicycle": True,
                     },
                     {
                         "wagonType": "Vaunu",
                         "salesNumber": "2",
                         "wifi": True,
                         "pet": False,
+                        "accessible": False,
+                        "bicycle": False,
                     },
                 ]
 
@@ -923,13 +964,23 @@ if st.session_state.haku_tehty:
               wifi_str = (
                   "📶 Wi-Fi" if v.get("wifi", True) else "🚫 Ei Wi-Fi"
               )
-              pet_str = "🐾 Lemmikkivaunu" if v.get("pet", False) else ""
+              pet_str = "🐾 Lemmikki" if v.get("pet", False) else ""
+              acc_str = (
+                  "♿ Invahissi/Esteetön" if v.get("accessible", False) else ""
+              )
+              bic_str = "🚲 Polkupyöräpaikat" if v.get("bicycle", False) else ""
+
+              delta_tekstit = [
+                  s
+                  for s in [wifi_str, pet_str, acc_str, bic_str]
+                  if s
+              ]
 
               with v_cols[idx]:
                 st.metric(
                     label=f"Vaunu {v_nro}",
                     value=v_nimi,
-                    delta=f"{wifi_str} {pet_str}".strip(),
+                    delta=" | ".join(delta_tekstit),
                 )
 
             st.markdown("---")
