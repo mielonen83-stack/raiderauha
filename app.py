@@ -17,7 +17,7 @@ st.divider()
 
 # Alustetaan muisti matkustajien rauharaporteille sessionstateen
 if "rauharaportit" not in st.session_state:
-    st.session_state.rauharaportit = {} # Muodossa: {junanumero: [viestit]}
+    st.session_state.rauharaportit = {}
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
@@ -52,7 +52,7 @@ oletus_paikka_idx = asema_nimet.index("Joensuu (JNS)") if "Joensuu (JNS)" in ase
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-# UUSI: Päivämääräkalenteri
+# Päivämääräkalenteri
 valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
 
 lahto = asema_dict[valittu_lahto_nimi]
@@ -61,18 +61,14 @@ paikka = asema_dict[valittu_paikka_nimi]
 if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
-    st.info("📡 Haetaan aikatauluja ja Digitrafficin reaaliaikatietoja...")
+    st.info("📡 Haetaan aikatauluja ja Digitrafficin tietoja...")
     st.divider()
     
-    # Digitrafficin päiväkohtainen haku muotoa YYYY-MM-DD
-    pvm_str = valittu_pvm.strftime('%Y-%m-%d')
-    url = f"https://rata.digitraffic.fi/api/v1/schedules/{lahto}/{paikka}/{pvm_str}"
-    
-    # Fallback live-hakuun jos kyse on tästä päivästä
-    live_url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
+    # Käytetään kaikille päiville luotettavaa live-trains endpointtia
+    url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}?departure_date={valittu_pvm.strftime('%Y-%m-%d')}"
     
     with st.spinner("Etsitään sopivia junavuoroja..."):
-        vastaus = requests.get(live_url if valittu_pvm == date.today() else url)
+        vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
         junat = vastaus.json()
@@ -112,12 +108,11 @@ if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
                             saapumis_dt = dt_obj
                 
                 if lahto_dt and saapumis_dt:
-                    is_today = valittu_pvm == date.today()
+                    is_today = (valittu_pvm == date.today())
                     
-                    # Jos kyseessä on tuleva päivä tai tämän päivän tuleva/kulkeva juna
                     if not is_today or (lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt)):
                         if not is_today:
-                            tila = f"📅 Päivämäärä {valittu_pvm.strftime('%d.%m.')}"
+                            tila = f"📅 Päivä {valittu_pvm.strftime('%d.%m.')}"
                         elif nyt < lahto_dt:
                             tila = "⏳ Lähtee pian"
                         else:
@@ -133,7 +128,7 @@ if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
                         })
             
             if not aktiiviset_junat:
-                st.warning("⚠️ Ei löytynyt aktiivisia vuoroja tälle päivälle tällä hetkellä.")
+                st.warning("⚠️ Valitsemallesi päivälle ei löytynyt enää aktiivisia/tulevia vuoroja tällä välillä.")
             else:
                 st.success(f"Löytyi {len(aktiiviset_junat)} junavuoroa!")
                 
@@ -206,7 +201,6 @@ if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
                         # --- JOUKOISTETUT MATKUSTAJIEN RAUHARAPORTIT ---
                         st.markdown("#### 🗣️ Matkustajien live-rauharaportit")
                         
-                        # Lomake omien havaintojen lähettämiseen
                         uusi_raportti = st.text_input(f"Ilmoita tunnelma tai vaunutieto tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 on superhiljainen, vaunu 5 täynnä porukkaa")
                         if st.button("Lähetä raportti", key=f"btn_{t_num}"):
                             if uusi_raportti:
@@ -215,7 +209,6 @@ if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
                                 st.session_state.rauharaportit[t_num].append(uusi_raportti)
                                 st.success("Kiitos! Raporttisi lisättiin muiden nähtäväksi.")
                         
-                        # Näytetään olemassa olevat raportit
                         if t_num in st.session_state.rauharaportit and st.session_state.rauharaportit[t_num]:
                             for r in st.session_state.rauharaportit[t_num]:
                                 st.write(f"💬 *\"{r}\"*")
