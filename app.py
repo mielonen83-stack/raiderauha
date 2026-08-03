@@ -39,7 +39,6 @@ components.html(ga_script, height=0, width=0)
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
 
-# Seuratut junat -tilamuuttuja
 if "seuratut_junat" not in st.session_state:
     st.session_state.seuratut_junat = ["23"]
 
@@ -404,7 +403,7 @@ with st.sidebar.form("palaute_lomake"):
                         )
                     kirjoittaja.writerow(rivi)
                 st.success(
-                    "Kiitos palautteestasi! Se tallennettiin onnistuneesti."
+                    "Kiitos palautestasi! Se tallennettiin onnistuneesti."
                     " 🚆✨"
                 )
             except Exception as e:
@@ -455,7 +454,9 @@ with laituri_tab1:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = r.get("commercialTrack", "-")
+                    track = str(r.get("commercialTrack", "-"))[
+                        :3
+                    ]  # Siistitty raide
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -513,7 +514,9 @@ with laituri_tab2:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = r.get("commercialTrack", "-")
+                    track = str(r.get("commercialTrack", "-"))[
+                        :3
+                    ]  # Siistitty raide
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -683,7 +686,9 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "DEPARTURE"
                     ):
                         aika_str = rivi.get("scheduledTime")
-                        lahto_raide = rivi.get("commercialTrack", "-")
+                        lahto_raide = str(
+                            rivi.get("commercialTrack", "-")
+                        )[:3]
                         if aika_str:
                             try:
                                 dt_obj = datetime.fromisoformat(
@@ -698,7 +703,9 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "ARRIVAL"
                     ):
                         aika_str = rivi.get("scheduledTime")
-                        saapumis_raide = rivi.get("commercialTrack", "-")
+                        saapumis_raide = str(
+                            rivi.get("commercialTrack", "-")
+                        )[:3]
                         if aika_str:
                             try:
                                 dt_obj = datetime.fromisoformat(
@@ -895,7 +902,9 @@ if st.session_state.haku_tehty:
                                 r_tyyppi = rivi.get("type")
                                 a_aika = rivi.get("scheduledTime")
                                 ero = rivi.get("differenceInMinutes", 0)
-                                raide = rivi.get("commercialTrack", "-")
+                                raide = str(
+                                    rivi.get("commercialTrack", "-")
+                                )[:3]
 
                                 if a_aika:
                                     try:
