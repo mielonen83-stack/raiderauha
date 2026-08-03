@@ -71,6 +71,20 @@ if "paivan_vitsi" not in st.session_state:
 if "haku_tehty" not in st.session_state:
   st.session_state.haku_tehty = False
 
+# Matkabingon tilan alustus
+if "bingo_ruudut" not in st.session_state:
+  st.session_state.bingo_ruudut = {
+      "Pahoittelemme myöhästymistä": False,
+      "Kaiuttimen rätinä": False,
+      "Puhelin ilman kuulokkeita": False,
+      "Kahvikuppi nurin tai kaatuu": False,
+      "Kadonnut matkalippu": False,
+      "Lehmä ikkunasta bongattu": False,
+      "Konduktörin syvä huokaus": False,
+      "Joku puhuu puheluun liian kovaa": False,
+      "Vessanovi ei meinaa mennä kiinni": False,
+  }
+
 try:
   client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
   ai_kaytossa = True
@@ -238,6 +252,41 @@ st.markdown(
 )
 st.divider()
 
+# --- MATKABINGO-OSIO AINA NÄKYVISSÄ ---
+st.markdown("### 🎫 Junamatkustajan Matkabingo")
+st.markdown(
+    "*Bongaa klassisia junailmiöitä matkan varrelta ja rukskaa ruutuja!*"
+)
+
+bingo_avain_lista = list(st.session_state.bingo_ruudut.keys())
+b_ R1 = st.columns(3)
+
+for i, avain in enumerate(bingo_avain_lista):
+  col_idx = i % 3
+  with [b_ R1, b_ R1, b_ R1][col_idx]:  # turvallinen sijoittelu sarakkeisiin
+    pass
+
+# Tehdään selkeä 3x3 sarakkeistus bingolle
+b_col1, b_col2, b_col3 = st.columns(3)
+bingo_sarakkeet = [b_col1, b_col2, b_col3]
+
+for i, (tehtävä, tila) import_optio in enumerate(
+    st.session_state.bingo_ruudut.items()
+):
+  col = bingo_sarakkeet[i % 3]
+  with col:
+    uusi_tila = st.checkbox(
+        tehtävä, value=tila, key=f"bingo_{i}", help="Rukskaa kun tapahtuu!"
+    )
+    st.session_state.bingo_ruudut[tehtävä] = uusi_tila
+
+# Tarkistetaan, tuliko bingo (kaikki tai rivi/pysty, yksinkertaistetaan: jos kaikki valittu -> voitto!)
+if all(st.session_state.bingo_ruudut.values()):
+  st.balloons()
+  st.success("🎉 **BINGO!** Olet kokenut täydellisen suomalaisen junamatkan!")
+
+st.divider()
+
 if st.session_state.haku_tehty:
   st.markdown(
       f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔"
@@ -369,7 +418,6 @@ if st.session_state.haku_tehty:
             for rivi in timeTable:
               s_koodi = rivi.get("stationShortCode")
 
-              # Otetaan mukaan vain ne rivit, jotka löytyvät varsinaisesta asema-kokoelmasta
               if s_koodi not in koodi_to_nimi:
                 continue
 
@@ -416,7 +464,6 @@ if st.session_state.haku_tehty:
                     else ""
                 )
 
-                # Haetaan suoraan puhtaana nimenä sanakirjasta
                 lyhenne = asema_info["asema"]
                 kokonainen_nimi = koodi_to_nimi.get(lyhenne, lyhenne)
 
