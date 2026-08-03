@@ -253,7 +253,7 @@ if hakunappi:
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']} ({status_teksti})"):
                         
-                        st.markdown("#### 📍 Junan aikataulu ja myöhästymiset")
+                        st.markdown("#### 📍 Junan koko reitin aikataulu ja pysähdykset")
                         
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
@@ -289,17 +289,11 @@ if hakunappi:
                         asemat_matkalla = list(asemat_map.values())
                         
                         if asemat_matkalla:
-                            # Näytetään nyt 8 ensimmäistä asemaa kerralla
-                            cols = st.columns(min(len(asemat_matkalla), 8))
-                            for idx, asema_info in enumerate(asemat_matkalla[:8]):
-                                with cols[idx]:
-                                    tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
-                                    myoha_str = f" (+{asema_info['myohassa']} min)" if asema_info['myohassa'] > 0 else ""
-                                    st.metric(
-                                        label=f"{tila_emoji} {asema_info['asema']}",
-                                        value=asema_info["aika"],
-                                        delta=myoha_str if myoha_str else None
-                                    )
+                            # Näytetään kaikki reitin asemat siistinä listana/riveinä, jotta näkyy koko matka perille asti
+                            for asema_info in asemat_matkalla:
+                                tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
+                                myoha_str = f" (+{asema_info['myohassa']} min myöhässä)" if asema_info['myohassa'] > 0 else ""
+                                st.write(f"{tila_emoji} **{asema_info['asema']}** – klo {asema_info['aika']}{myoha_str}")
                         
                         # --- JATKOYHTEYKSIEN TARKISTUS ---
                         viimeinen_asema = asemat_matkalla[-1] if asemat_matkalla else None
