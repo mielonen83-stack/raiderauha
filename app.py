@@ -167,7 +167,7 @@ if hakunappi:
             sää_url = f"https://api.open-meteo.com/v1/forecast?latitude={p_lat}&longitude={p_lon}&current=temperature_2m,weather_code"
             s_vast = requests.get(sää_url).json()
             lampo = s_vast['current']['temperature_2m']
-            st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}):** {lampo}°C")
+            st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}:** {lampo}°C")
         except:
             pass
 
@@ -312,12 +312,14 @@ if hakunappi:
                                 except:
                                     pass
                         
-                        # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT ---
+                        # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT (LOMAKE) ---
                         st.markdown("#### 🗣️ Matkustajien live-rauharaportit (Tietokanta)")
                         
-                        uusi_raportti = st.text_input(f"Ilmoita tunnelma tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 superhiljainen")
-                        if st.button("Lähetä raportti tietokantaan", key=f"btn_{t_num}"):
-                            if uusi_raportti:
+                        with st.form(key=f"form_{t_num}"):
+                            uusi_raportti = st.text_input(f"Ilmoita tunnelma tälle junalle ({t_num}):", placeholder="Esim. Vaunu 3 superhiljainen")
+                            submit_nappi = st.form_submit_button("Lähetä raportti tietokantaan")
+                            
+                            if submit_nappi and uusi_raportti:
                                 tallenna_raportti(t_num, uusi_raportti)
                                 st.success("Kiitos! Raportti tallennettiin.")
                         
