@@ -1,6 +1,6 @@
 import streamlit as st
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from openai import OpenAI
 
 # Sivun perusasetukset
@@ -34,7 +34,7 @@ def hae_asemat():
             return asema_lista
     except:
         pass
-    return {"Helsinki (HKI)": "HKI", "Tampere (TPE)": "TPE", "Turku (TKU)": "TKU", "Oulu (OULU)": "OULU"}
+    return {"Helsinki (HKI)": "HKI", "Joensuu (JNS)": "JNS", "Tampere (TPE)": "TPE"}
 
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
@@ -42,7 +42,7 @@ asema_nimet = list(asema_dict.keys())
 # Sivupalkin hakuehdot
 st.sidebar.header("🎛️ Matkan tiedot")
 oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
-oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
+oletus_paikka_idx = asema_nimet.index("Joensuu (JNS)") if "Joensuu (JNS)" in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
@@ -50,15 +50,15 @@ valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=
 lahto = asema_dict[valittu_lahto_nimi]
 paikka = asema_dict[valittu_paikka_nimi]
 
-if st.sidebar.button("🔍 Etsi junat ja seuranta", type="primary"):
+if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}**")
-    st.info("📡 Haetaan reaaliaikaisia sijainteja ja aikataulutietoja Digitrafficista...")
+    st.info("📡 Haetaan vain tulevia ja parhaillaan kulkevia junavuoroja...")
     st.divider()
     
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
     
-    with st.spinner("Haetaan junavuoroja ja seurantaa..."):
+    with st.spinner("Haetaan junavuoroja..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
@@ -68,6 +68,8 @@ if st.sidebar.button("🔍 Etsi junat ja seuranta", type="primary"):
             st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
         else:
             aktiiviset_junat = []
+            nyt = datetime.now(timezone.utc)
+            
             for juna in junat:
                 if not isinstance(juna, dict) or juna.get('cancelled', False):
                     continue
@@ -76,68 +78,85 @@ if st.sidebar.button("🔍 Etsi junat ja seuranta", type="primary"):
                 train_type = juna.get('trainType')
                 timeTable = juna.get('timeTableRows', [])
                 
-                lahto_aika = ""
-                saapumis_aika = ""
+                lahto_aika_str = ""
+                saapumis_aika_str = ""
+                lahto_dt = None
+                saapumis_dt = None
                 
+                # Etsitään oikeat lähtö- ja saapumisajat tälle nimenomaiselle välille
                 for rivi in timeTable:
                     if rivi.get('stationShortCode') == lahto and rivi.get('type') == 'DEPARTURE':
                         aika_str = rivi.get('scheduledTime')
                         if aika_str:
-                            lahto_aika = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
+                            lahto_aika_str = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
+                            lahto_dt = datetime.fromisoformat(aika_str.replace('Z', '+00:00'))
                     if rivi.get('stationShortCode') == paikka and rivi.get('type') == 'ARRIVAL':
                         aika_str = rivi.get('scheduledTime')
                         if aika_str:
-                            saapumis_aika = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
+                            saapumis_aika_str = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
+                            saapumis_dt = datetime.fromisoformat(aika_str.replace('Z', '+00:00'))
                 
-                if lahto_aika and saapumis_aika:
+                # TARKISTUS: Otetaan mukaan VAIN ne junat, joiden saapumisaika määränpäähän on TÄSSÄ HETKESSÄ TAI TULEVAISUUDESSA
+                if lahto_dt and saapumis_dt and saapumis_dt >= nyt:
+                    
+                    if nyt < lahto_dt:
+                        tila = "⏳ Lähtee pian"
+                    else:
+                        tila = "🟢 Juuri nyt matkalla"
+
                     aktiiviset_junat.append({
                         "numero": train_num,
                         "tyyppi": train_type,
-                        "lahto": lahto_aika,
-                        "saapuminen": saapumis_aika,
+                        "lahto": lahto_aika_str,
+                        "saapuminen": saapumis_aika_str,
                         "aikataulu": timeTable,
-                        "kulkemassa": juna.get('runningCurrently', False)
+                        "tila": tila
                     })
             
             if not aktiiviset_junat:
-                st.warning("Ei löytynyt suoria junia valitsemallesu välille.")
+                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet perille).")
             else:
-                st.success(f"Löytyi {len(aktiiviset_junat)} junaa!")
+                st.success(f"Löytyi {len(aktiiviset_junat)} tulevaa / matkassa olevaa junaa!")
                 
                 for juna in aktiiviset_junat:
                     t_num = juna["numero"]
                     t_tyyppi = juna["tyyppi"]
-                    
-                    status_teksti = "🟢 Kulkee parhaillaan" if juna["kulkemassa"] else "🕒 Odottaa lähtöä / Mennyt"
+                    status_teksti = juna["tila"]
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']} ({status_teksti})"):
                         
-                        # --- KORJATTU REAALIAIKAINEN ETENEMINEN (Ei tuplarivejä) ---
-                        st.markdown("#### 📍 Junan reitti ja aikataulu")
+                        st.markdown("#### 📍 Tulevat pysähdykset ja reitti")
                         
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
                         
+                        # Suodatetaan aikataulusta vain ne asemat, jotka ovat lähtöaseman jälkeen
+                        naytetaan = False
                         for rivi in timeTable:
                             s_koodi = rivi.get('stationShortCode')
-                            a_aika = rivi.get('scheduledTime')
-                            myohassa = rivi.get('differenceInMinutes', 0)
-                            onko_mennyt = rivi.get('actualTime') is not None
+                            if s_koodi == lahto and rivi.get('type') == 'DEPARTURE':
+                                naytetaan = True
                             
-                            if a_aika and s_koodi:
-                                klo = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).strftime('%H:%M')
-                                # Tallennetaan asema, otetaan huomioon joko lähtö- tai saapumisaika
-                                if s_koodi not in asemat_map:
-                                    asemat_map[s_koodi] = {
-                                        "asema": s_koodi,
-                                        "aika": klo,
-                                        "myohassa": myohassa,
-                                        "aktiivinen": onko_mennyt
-                                    }
-                                else:
-                                    # Jos tiedoissa on jo asema, päivitetään aktiivisuustila jos toinen rivi on ohitettu
-                                    if onko_mennyt:
-                                        asemat_map[s_koodi]["aktiivinen"] = True
+                            if naytetaan and s_koodi:
+                                a_aika = rivi.get('scheduledTime')
+                                myohassa = rivi.get('differenceInMinutes', 0)
+                                onko_mennyt = rivi.get('actualTime') is not None
+                                
+                                if a_aika:
+                                    klo = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).strftime('%H:%M')
+                                    if s_koodi not in asemat_map:
+                                        asemat_map[s_koodi] = {
+                                            "asema": s_koodi,
+                                            "aika": klo,
+                                            "myohassa": myohassa,
+                                            "aktiivinen": onko_mennyt
+                                        }
+                                    else:
+                                        if onko_mennyt:
+                                            asemat_map[s_koodi]["aktiivinen"] = True
+                            
+                            if s_koodi == paikka and rivi.get('type') == 'ARRIVAL':
+                                break
                         
                         asemat_matkalla = list(asemat_map.values())
                         
@@ -222,4 +241,4 @@ if st.sidebar.button("🔍 Etsi junat ja seuranta", type="primary"):
     else:
         st.error("Virhe haettaessa junatietoja.")
 else:
-    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja seuranta**.")
+    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi tulevat junat ja seuranta**.")
