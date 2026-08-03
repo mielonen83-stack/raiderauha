@@ -28,7 +28,7 @@ ga_script = f"""
       gtag('config', '{GA_MEASUREMENT_ID}');
     </script>
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Raiderauha on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sään ja matkustajien live-raportit." />
+    <meta name="description" content="Raiderauha on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja matkustajien live-raportit." />
     <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka, matkabingo" />
 """
 components.html(ga_script, height=0, width=0)
@@ -43,6 +43,15 @@ def alusta_tietokanta():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             juna_numero TEXT,
             raportti TEXT,
+            aika TEXT
+        )
+    """)
+  kursori.execute("""
+        CREATE TABLE IF NOT EXISTS chat_viestit (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            juna_numero TEXT,
+            nimimerkki TEXT,
+            viesti TEXT,
             aika TEXT
         )
     """)
@@ -73,6 +82,32 @@ def hae_raportit(juna_numero):
   kursori.execute(
       "SELECT raportti, aika FROM raportit WHERE juna_numero = ? ORDER BY id"
       " DESC",
+      (str(juna_numero),),
+  )
+  tulokset = kursori.fetchall()
+  yhteys.close()
+  return tulokset
+
+
+def tallenna_chat_viesti(juna_numero, nimimerkki, viesti):
+  yhteys = sqlite3.connect("rauharaportit.db")
+  kursori = yhteys.cursor()
+  aikaleima = datetime.now(ZoneInfo("Europe/Helsinki")).strftime("%H:%M")
+  kursori.execute(
+      "INSERT INTO chat_viestit (juna_numero, nimimerkki, viesti, aika) VALUES"
+      " (?, ?, ?, ?)",
+      (str(juna_numero), nimimerkki, viesti, aikaleima),
+  )
+  yhteys.commit()
+  yhteys.close()
+
+
+def hae_chat_viestit(juna_numero):
+  yhteys = sqlite3.connect("rauharaportit.db")
+  kursori = yhteys.cursor()
+  kursori.execute(
+      "SELECT nimimerkki, viesti, aika FROM chat_viestit WHERE juna_numero = ?"
+      " ORDER BY id ASC",
       (str(juna_numero),),
   )
   tulokset = kursori.fetchall()
@@ -555,7 +590,7 @@ if st.session_state.haku_tehty:
                   pass
 
             # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT ---
-            st.markdown("#### 🗣️ Matkustajien live-rauharaportit (Tietokanta)")
+            st.markdown("#### 🗣️ Matkustajien live-rauharaportit")
 
             with st.form(key=f"form_{t_num}"):
               uusi_raportti = st.text_input(
@@ -583,6 +618,51 @@ if st.session_state.haku_tehty:
                 )
             else:
               st.caption("Ei vielä raportteja tässä tietokannassa.")
+
+            st.divider()
+
+            # --- MATKUSTAJIEN LIVE-CHAT ---
+            st.markdown("#### 💬 Matkustajien live-chat")
+            st.markdown(
+                f"*Keskustele muiden samassa junassa ({t_num}) matkustavien"
+                " kanssa!*"
+            )
+
+            with st.form(key=f"chat_form_{t_num}", clear_on_submit=True):
+              c_col1, c_col2 = st.columns([1, 2])
+              with c_col1:
+                nimimerkki = st.text_input(
+                    "Nimimerkki", value="Matkustaja", max_chars=20
+                )
+              with c_col2:
+                uusi_viesti = st.text_input(
+                    "Viesti", placeholder="Kirjoita jotain junan tunnelmasta..."
+                )
+
+              laheta_chat_nappi = st.form_submit_button("Lähetä viesti chattiin")
+
+              if laheta_chat_nappi:
+                if uusi_viesti.strip():
+                  tallenna_chat_viesti(t_num, nimimerkki, uusi_viesti)
+                  st.rerun()
+                else:
+                  st.warning("Viesti ei voi olla tyhjä.")
+
+            historia = hae_chat_viestit(t_num)
+            if historia:
+              chat_container = st.container(height=200)
+              with chat_container:
+                for nimiv, viestiv, aikav in historia:
+                  st.markdown(
+                      f"**{nimiv}** <small style='color: gray;'>({aikav})</small>:"
+                      f" {viestiv}",
+                      unsafe_allow_html=True,
+                  )
+            else:
+              st.caption(
+                  "Ei viestejä vielä. Ole ensimmäinen, joka aloittaa keskustelun"
+                  " tällä junalla!"
+              )
 
             st.divider()
 
@@ -655,5 +735,5 @@ else:
 st.markdown("---")
 with st.expander("ℹ️ Tietoa Raiderauha-palvelusta (Junatutka & Aikataulut)"):
   st.markdown("""
-    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin junan tunnelmasta, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
+    **Raiderauha** on kattava ja reaaliaikainen **junatutka**, jonka avulla matkustajat voivat tarkistaa suomalaisten junien aikataulut, mahdolliset **myöhästymiset**, **rataliikennehäiriöt** sekä sääolosuhteet määränpäässä. Palvelu hyödyntää virallista Fintrafficin avointa dataa ja tarjoaa tekoälyn avustuksella vaunusuosituksia sekä hauskan matkabingon matkan ratoksi. Etsitpä sitten tietoa IC-junien kulusta, vaihtoyhteyksistä tai haluat jättää live-raportin tai chat-viestin junan tunnelmasta, Raiderauha auttaa pitämään matkasi rauhallisena ja hallinnassa.
     """)
