@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from openai import OpenAI
 
 # Sivun perusasetukset
@@ -53,7 +54,7 @@ paikka = asema_dict[valittu_paikka_nimi]
 if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}**")
-    st.info("📡 Haetaan vain tulevia ja parhaillaan kulkevia junavuoroja...")
+    st.info("📡 Haetaan vain tulevia ja parhaillaan kulkevia junavuoroja (Suomen aika)...")
     st.divider()
     
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
@@ -68,7 +69,9 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
             st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
         else:
             aktiiviset_junat = []
-            nyt = datetime.now(timezone.utc)
+            # Korjattu: Käytetään suoraan Suomen aikaa (Europe/Helsinki)
+            suomi_aika = ZoneInfo("Europe/Helsinki")
+            nyt = datetime.now(suomi_aika)
             
             for juna in junat:
                 if not isinstance(juna, dict) or juna.get('cancelled', False):
@@ -87,15 +90,17 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                     if rivi.get('stationShortCode') == lahto and rivi.get('type') == 'DEPARTURE':
                         aika_str = rivi.get('scheduledTime')
                         if aika_str:
-                            lahto_aika_str = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
-                            lahto_dt = datetime.fromisoformat(aika_str.replace('Z', '+00:00'))
+                            dt_obj = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).astimezone(suomi_aika)
+                            lahto_aika_str = dt_obj.strftime('%H:%M')
+                            lahto_dt = dt_obj
                     if rivi.get('stationShortCode') == paikka and rivi.get('type') == 'ARRIVAL':
                         aika_str = rivi.get('scheduledTime')
                         if aika_str:
-                            saapumis_aika_str = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
-                            saapumis_dt = datetime.fromisoformat(aika_str.replace('Z', '+00:00'))
+                            dt_obj = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).astimezone(suomi_aika)
+                            saapumis_aika_str = dt_obj.strftime('%H:%M')
+                            saapumis_dt = dt_obj
                 
-                # TIukka tarkistus: Otetaan mukaan VAIN ne junat, joiden LÄHTÖAIKA on tulevaisuudessa (tai juna on tällä hetkellä matkalla)
+                # Verrataan tarkasti Suomen aikaan perustuvia aikoja
                 if lahto_dt and saapumis_dt:
                     if lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt):
                         
@@ -142,7 +147,8 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                                 onko_mennyt = rivi.get('actualTime') is not None
                                 
                                 if a_aika:
-                                    klo = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).strftime('%H:%M')
+                                    dt_obj = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).astimezone(suomi_aika)
+                                    klo = dt_obj.strftime('%H:%M')
                                     if s_koodi not in asemat_map:
                                         asemat_map[s_koodi] = {
                                             "asema": s_koodi,
