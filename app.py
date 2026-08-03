@@ -120,6 +120,10 @@ def hae_chat_viestit(juna_numero):
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
 
+# --- LISÄYS 1: Seuratut junat -tilamuuttuja ---
+if "seuratut_junat" not in st.session_state:
+    st.session_state.seuratut_junat = ["23"]
+
 if "paivan_vitsi" not in st.session_state:
     st.session_state.paivan_vitsi = (
         "Miksi juna pysähtyi keskelle metsää? – Konduktööri unohti pyyhkiä pyyhkijät"
@@ -343,6 +347,38 @@ else:
 
 st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
+
+# --- LISÄYS 1: Seuratut junat -käyttöliittymä sivupalkkiin ---
+st.sidebar.markdown("### ⭐ Seuratut junat")
+seurattava_input = st.sidebar.text_input(
+    "Lisää junanumero seurantaan", placeholder="Esim. 67"
+)
+if st.sidebar.button("Lisää juna"):
+    if (
+        seurattava_input
+        and seurattava_input not in st.session_state.seuratut_junat
+    ):
+        st.session_state.seuratut_junat.append(seurattava_input)
+        st.sidebar.success(f"Juna {seurattava_input} lisätty!")
+
+for j_nro in st.session_state.seuratut_junat:
+    sijainti = hae_junan_sijainti(j_nro)
+    tila_teksti = (
+        f"🟢 Liikkeessä ({round(sijainti['nopeus'] * 3.6)} km/h)"
+        if sijainti
+        else "⏳ Ei live-tietoa"
+    )
+    st.sidebar.write(f"🚆 Juna {j_nro}: {tila_teksti}")
+
+st.sidebar.divider()
+
+# --- LISÄYS 3: Esteettömyys- ja palvelusuodattimet sivupalkkiin ---
+st.sidebar.markdown("### ♿ Palvelusuodattimet hakulle")
+vaadi_pyora = st.sidebar.checkbox("🚲 Pyöräpaikka vaaditaan")
+vaadi_lemmikki = st.sidebar.checkbox("🐾 Lemmikkivaunu vaaditaan")
+vaadi_esteeton = st.sidebar.checkbox("♿ Esteetön vaunu vaaditaan")
+
+st.sidebar.divider()
 
 if st.sidebar.button("🃏 Arvo uusi matkavitsi", use_container_width=True):
     if ai_kaytossa:
@@ -712,6 +748,84 @@ if st.session_state.haku_tehty:
                     t_tyyppi = juna["tyyppi"]
                     status_teksti = juna["tila"]
 
+                    # Haetaan vaunut suodatusta varten
+                    vaunut = []
+                    veturit = []
+                    komp_url = f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
+                    try:
+                        komp_vastaus = requests.get(komp_url)
+                        if komp_vastaus.status_code == 200:
+                            komp_data = komp_vastaus.json()
+                            sections = komp_data.get("journeySections", [])
+                            if sections:
+                                vaunut = sections[0].get("wagons", [])
+                                veturit = sections[0].get("locomotives", [])
+                    except:
+                        pass
+
+                    # Fallback oletusvaunuihin jos API ei palauta koostumusta
+                    if not vaunut:
+                        if t_tyyppi == "IC":
+                            vaunut = [
+                                {
+                                    "wagonType": "Edb (Ekstra)",
+                                    "salesNumber": "1",
+                                    "wifi": True,
+                                    "pet": False,
+                                    "accessible": True,
+                                    "bicycle": True,
+                                },
+                                {
+                                    "wagonType": "Ravintola",
+                                    "salesNumber": "2",
+                                    "wifi": True,
+                                    "pet": False,
+                                    "accessible": True,
+                                    "bicycle": False,
+                                },
+                                {
+                                    "wagonType": "InterCity",
+                                    "salesNumber": "3",
+                                    "wifi": True,
+                                    "pet": True,
+                                    "accessible": False,
+                                    "bicycle": True,
+                                },
+                            ]
+                        elif t_tyyppi == "S":
+                            vaunut = [
+                                {
+                                    "wagonType": "Pendolino",
+                                    "salesNumber": "1",
+                                    "wifi": True,
+                                    "pet": False,
+                                    "accessible": True,
+                                    "bicycle": False,
+                                },
+                                {
+                                    "wagonType": "Pendolino Ravintola",
+                                    "salesNumber": "2",
+                                    "wifi": True,
+                                    "pet": False,
+                                    "accessible": False,
+                                    "bicycle": False,
+                                },
+                            ]
+
+                    # --- LISÄYS 3: Suodatustarkistus ---
+                    onko_pyora = any(w.get("bicycle", False) for w in vaunut)
+                    onko_lemmikki = any(w.get("pet", False) for w in vaunut)
+                    onko_esteeton = any(
+                        w.get("accessible", False) for w in vaunut
+                    )
+
+                    if vaadi_pyora and not onko_pyora:
+                        continue
+                    if vaadi_lemmikki and not onko_lemmikki:
+                        continue
+                    if vaadi_esteeton and not onko_esteeton:
+                        continue
+
                     historia_myohassa = hae_junan_historia_luotettavuus(t_num)
                     if historia_myohassa < 5:
                         luotettavuus_taso = "⭐⭐⭐⭐⭐ Erittäin luotettava"
@@ -753,6 +867,13 @@ if st.session_state.haku_tehty:
                                 "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä"
                                 " hetkellä saatavilla."
                             )
+
+                        st.divider()
+
+                        # --- LISÄYS 2: Junan jakaminen / Pikajakolinkki ---
+                        st.markdown("#### 🔗 Jaa junan tiedot kaverille")
+                        jaettava_teksti = f"Hei! Olen matkassa junalla {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi.split(' (')[0]} -> {valittu_paikka_nimi.split(' (')[0]}. Tsekkaa Raidetutkasta tilanne!"
+                        st.code(jaettava_teksti, language="text")
 
                         st.divider()
 
@@ -1012,24 +1133,6 @@ if st.session_state.haku_tehty:
                             " palvelutietueet"
                         )
 
-                        vaunut = []
-                        veturit = []
-                        komp_url = f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
-                        try:
-                            komp_vastaus = requests.get(komp_url)
-                            if komp_vastaus.status_code == 200:
-                                komp_data = komp_vastaus.json()
-                                sections = komp_data.get(
-                                    "journeySections", []
-                                )
-                                if sections:
-                                    vaunut = sections[0].get("wagons", [])
-                                    veturit = sections[0].get(
-                                        "locomotives", []
-                                    )
-                        except:
-                            pass
-
                         if veturit:
                             v_tyypit = [
                                 v.get("locomotiveType", "Veturiyksikkö")
@@ -1072,89 +1175,6 @@ if st.session_state.haku_tehty:
                                     "🚂 **Veturitiedot:** Ei erillisiä"
                                     " veturitietoja saatavilla."
                                 )
-
-                        if not vaunut:
-                            if t_tyyppi == "IC":
-                                vaunut = [
-                                    {
-                                        "wagonType": "Edb (Ekstra)",
-                                        "salesNumber": "1",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": True,
-                                        "bicycle": True,
-                                    },
-                                    {
-                                        "wagonType": "Ravintola",
-                                        "salesNumber": "2",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": True,
-                                        "bicycle": False,
-                                    },
-                                    {
-                                        "wagonType": "InterCity",
-                                        "salesNumber": "3",
-                                        "wifi": True,
-                                        "pet": True,
-                                        "accessible": False,
-                                        "bicycle": True,
-                                    },
-                                    {
-                                        "wagonType": "InterCity",
-                                        "salesNumber": "4",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": False,
-                                        "bicycle": False,
-                                    },
-                                    {
-                                        "wagonType": "InterCity",
-                                        "salesNumber": "5",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": False,
-                                        "bicycle": False,
-                                    },
-                                ]
-                            elif t_tyyppi == "S":
-                                vaunut = [
-                                    {
-                                        "wagonType": "Pendolino",
-                                        "salesNumber": "1",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": True,
-                                        "bicycle": False,
-                                    },
-                                    {
-                                        "wagonType": "Pendolino Ravintola",
-                                        "salesNumber": "2",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": False,
-                                        "bicycle": False,
-                                    },
-                                    {
-                                        "wagonType": "Pendolino",
-                                        "salesNumber": "3",
-                                        "wifi": True,
-                                        "pet": True,
-                                        "accessible": False,
-                                        "bicycle": False,
-                                    },
-                                ]
-                            else:
-                                vaunut = [
-                                    {
-                                        "wagonType": "Vakiovaunu",
-                                        "salesNumber": "1",
-                                        "wifi": True,
-                                        "pet": False,
-                                        "accessible": True,
-                                        "bicycle": True,
-                                    }
-                                ]
 
                         if vaunut:
                             v_data = []
