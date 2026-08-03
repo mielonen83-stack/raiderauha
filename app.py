@@ -12,7 +12,7 @@ from streamlit_autorefresh import st_autorefresh
 # Sivun perusasetukset ja SEO-otsikko
 st.set_page_config(
     page_title=(
-        "Raiderauha – Reaaliaikainen Junatutka, Aikataulut & Rataliikennehäiriöt"
+        "Raidetutka – Reaaliaikainen Junatutka, Aikataulut & Rataliikennehäiriöt"
     ),
     page_icon="🚆",
     layout="wide",
@@ -30,7 +30,7 @@ ga_script = f"""
       gtag('config', '{GA_MEASUREMENT_ID}');
     </script>
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Raiderauha on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja matkustajien live-raportit." />
+    <meta name="description" content="Raidetutka on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja matkustajien live-raportit." />
     <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka" />
 """
 components.html(ga_script, height=0, width=0)
@@ -262,7 +262,9 @@ def hae_junan_sijainti(juna_numero):
             data = vastaus.json()
             if data and isinstance(data, list) and len(data) > 0:
                 sijainti_info = data[0]
-                koordinaatit = sijainti_info.get("location", {}).get("coordinates", [])
+                koordinaatit = sijainti_info.get("location", {}).get(
+                    "coordinates", []
+                )
                 if len(koordinaatit) == 2:
                     lon, lat = koordinaatit
                     nopeus = sijainti_info.get("speed", 0)
@@ -297,7 +299,7 @@ def hae_tekoaly_tervehdys():
         except:
             pass
     return (
-        "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään edes"
+        "Tervetuloa Raidetutkaan! Toivottavasti juna kulkee tänään edes"
         " sinnepäin. 🚆😂"
     )
 
@@ -312,7 +314,7 @@ live_paivitys_paalla = st.sidebar.checkbox(
     "🔄 Automaattinen live-kartan päivitys (15s)", value=True
 )
 if live_paivitys_paalla:
-    st_autorefresh(interval=15000, key="raiderauha_live_refresh")
+    st_autorefresh(interval=15000, key="raidetutka_live_refresh")
 
 st.sidebar.divider()
 
@@ -396,7 +398,7 @@ valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
 lahto = asema_dict[valittu_lahto_nimi]["koodi"]
 paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
-hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
+hakunappi = st.sidebar.button("🔍 Etsi junat ja Raidetutka", type="primary")
 
 if hakunappi:
     st.session_state.haku_tehty = True
@@ -408,14 +410,14 @@ st.sidebar.caption(
 )
 
 # --- PÄÄSIVU ---
-st.title("🚆 Raiderauha")
+st.title("🚆 Raidetutka")
 st.markdown(
     "##### *Reaaliaikainen junatutka, viralliset laiturinäytöt, vaunukoostumukset"
     " ja matkustajien live-raportit*"
 )
 st.divider()
 
-# --- UUSI OMINAISUUS: VIRALLINEN LAITURINÄYTTÖ ---
+# --- VIRALLINEN LAITURINÄYTTÖ ---
 st.markdown(
     f"### 📺 Virallinen Laiturinäyttö – {valittu_lahto_nimi.split(' ')[0]}"
 )
@@ -437,17 +439,18 @@ with laituri_tab1:
             cancelled = aj.get("cancelled", False)
             timetable = aj.get("timeTableRows", [])
 
-            # Etsitään lähtötiedot tältä asemalta
             for r in timetable:
-                if r.get("stationShortCode") == lahto and r.get("type") == "DEPARTURE":
+                if (
+                    r.get("stationShortCode") == lahto
+                    and r.get("type") == "DEPARTURE"
+                ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
                     track = r.get("commercialTrack", "-")
                     if sch:
-                        dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(
-                            suomi_aika
-                        )
-                        # Selvitetään pääteasema
+                        dt = datetime.fromisoformat(
+                            sch.replace("Z", "+00:00")
+                        ).astimezone(suomi_aika)
                         paateasema_koodi = timetable[-1].get("stationShortCode")
                         paateasema_nimi = koodi_to_nimi.get(
                             paateasema_koodi, paateasema_koodi
@@ -488,15 +491,17 @@ with laituri_tab2:
             timetable = aj.get("timeTableRows", [])
 
             for r in timetable:
-                if r.get("stationShortCode") == lahto and r.get("type") == "ARRIVAL":
+                if (
+                    r.get("stationShortCode") == lahto
+                    and r.get("type") == "ARRIVAL"
+                ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
                     track = r.get("commercialTrack", "-")
                     if sch:
-                        dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(
-                            suomi_aika
-                        )
-                        # Mistä juna tulee (ensimmäinen asema)
+                        dt = datetime.fromisoformat(
+                            sch.replace("Z", "+00:00")
+                        ).astimezone(suomi_aika)
                         lahtoasema_koodi = timetable[0].get("stationShortCode")
                         lahtoasema_nimi = koodi_to_nimi.get(
                             lahtoasema_koodi, lahtoasema_koodi
@@ -739,17 +744,21 @@ if st.session_state.haku_tehty:
                                 f" nopeudella **{kmh_nopeus} km/h**."
                             )
 
-                            df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
+                            df_kartta = pd.DataFrame(
+                                {"lat": [j_lat], "lon": [j_lon]}
+                            )
                             st.map(df_kartta, zoom=7, use_container_width=True)
                         else:
                             st.caption(
-                                "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä hetkellä"
-                                " saatavilla."
+                                "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä"
+                                " hetkellä saatavilla."
                             )
 
                         st.divider()
 
-                        st.markdown("#### 📍 Junan koko reitin reaaliaikainen aikataulu")
+                        st.markdown(
+                            "#### 📍 Junan koko reitin reaaliaikainen aikataulu"
+                        )
 
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
@@ -762,26 +771,40 @@ if st.session_state.haku_tehty:
                             if s_koodi not in koodi_to_nimi:
                                 continue
 
-                            if s_koodi == lahto and rivi.get("type") == "DEPARTURE":
+                            if (
+                                s_koodi == lahto
+                                and rivi.get("type") == "DEPARTURE"
+                            ):
                                 naytetaan = True
 
                             if naytetaan and s_koodi:
                                 a_aika = rivi.get("scheduledTime")
                                 myohassa = rivi.get("differenceInMinutes", 0)
-                                onko_mennyt = rivi.get("actualTime") is not None
+                                onko_mennyt = (
+                                    rivi.get("actualTime") is not None
+                                )
 
-                                if s_koodi == paikka and rivi.get("type") == "ARRIVAL":
+                                if (
+                                    s_koodi == paikka
+                                    and rivi.get("type") == "ARRIVAL"
+                                ):
                                     maaranpaa_myohassa = myohassa
 
                                 if a_aika:
                                     dt_obj = datetime.fromisoformat(
                                         a_aika.replace("Z", "+00:00")
                                     ).astimezone(suomi_aika)
-                                    reaaliaika_dt = dt_obj + timedelta(minutes=myohassa)
+                                    reaaliaika_dt = dt_obj + timedelta(
+                                        minutes=myohassa
+                                    )
                                     klo = reaaliaika_dt.strftime("%H:%M")
-                                    onko_kello_mennyt_ohi = reaaliaika_dt <= nyt
+                                    onko_kello_mennyt_ohi = (
+                                        reaaliaika_dt <= nyt
+                                    )
 
-                                    aktiivinen_tila = onko_mennyt or onko_kello_mennyt_ohi
+                                    aktiivinen_tila = (
+                                        onko_mennyt or onko_kello_mennyt_ohi
+                                    )
 
                                     if s_koodi not in asemat_map:
                                         asemat_map[s_koodi] = {
@@ -792,30 +815,41 @@ if st.session_state.haku_tehty:
                                         }
                                     else:
                                         if aktiivinen_tila:
-                                            asemat_map[s_koodi]["aktiivinen"] = True
+                                            asemat_map[s_koodi][
+                                                "aktiivinen"
+                                            ] = True
 
-                                if s_koodi == paikka and rivi.get("type") == "ARRIVAL":
+                                if (
+                                    s_koodi == paikka
+                                    and rivi.get("type") == "ARRIVAL"
+                                ):
                                     break
 
                         asemat_matkalla = list(asemat_map.values())
 
                         if asemat_matkalla:
                             for asema_info in asemat_matkalla:
-                                tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
+                                tila_emoji = (
+                                    "✅" if asema_info["aktiivinen"] else "⏳"
+                                )
                                 myoha_str = (
                                     f" (+{asema_info['myohassa']} min myöhässä)"
-                                    if asema_info['myohassa'] > 0
+                                    if asema_info["myohassa"] > 0
                                     else ""
                                 )
                                 lyhenne = asema_info["asema"]
-                                kokonainen_nimi = koodi_to_nimi.get(lyhenne, lyhenne)
+                                kokonainen_nimi = koodi_to_nimi.get(
+                                    lyhenne, lyhenne
+                                )
 
                                 st.write(
                                     f"{tila_emoji} **{kokonainen_nimi}** – klo"
                                     f" {asema_info['aika']}{myoha_str}"
                                 )
 
-                        viimeinen_asema = asemat_matkalla[-1] if asemat_matkalla else None
+                        viimeinen_asema = (
+                            asemat_matkalla[-1] if asemat_matkalla else None
+                        )
                         if viimeinen_asema and viimeinen_asema["myohassa"] > 0:
                             st.warning(
                                 f"⚠️ **Vaihdot vaarassa:** Juna on noin"
@@ -824,13 +858,16 @@ if st.session_state.haku_tehty:
                             )
                         else:
                             st.success(
-                                "✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussa."
+                                "✅ **Vaihtoyhteydet:** Juna näyttäisi olevan"
+                                " aikataulussa."
                             )
 
                         st.divider()
 
                         if maaranpaa_myohassa >= 60:
-                            prosentti = 50 if maaranpaa_myohassa >= 120 else 25
+                            prosentti = (
+                                50 if maaranpaa_myohassa >= 120 else 25
+                            )
                             st.error(
                                 f"🚨 **Myöhästymiskorvausoikeus aktivoitunut!** Juna on"
                                 f" myöhässä perillä {maaranpaa_myohassa} min. Olet oikeutettu"
@@ -862,7 +899,9 @@ if st.session_state.haku_tehty:
                             st.divider()
 
                         if ai_kaytossa:
-                            with st.spinner("🤖 Rauhavahti analysoi vaunutilannetta..."):
+                            with st.spinner(
+                                "🤖 Raidetutkan tekoäly analysoi vaunutilannetta..."
+                            ):
                                 try:
                                     prompt = (
                                         "Olet sarkastinen matkaoppaan assistentti. Anna hyvin"
@@ -872,17 +911,19 @@ if st.session_state.haku_tehty:
                                     )
                                     completion = client.chat.completions.create(
                                         model="gpt-4o-mini",
-                                        messages=[{"role": "user", "content": prompt}],
+                                        messages=[
+                                            {"role": "user", "content": prompt}
+                                        ],
                                         max_tokens=80,
                                     )
                                     st.info(
-                                        "🤖 **Rauhavahti:**\n\n"
+                                        "🤖 **Raidetutka AI:**\n\n"
                                         f"{completion.choices[0].message.content}"
                                     )
                                 except:
                                     pass
 
-                        st.markdown("#### 🗣️ Matkustajien live-rauharaportit")
+                        st.markdown("#### 🗣️ Matkustajien live-raportit")
 
                         with st.form(key=f"form_{t_num}"):
                             uusi_raportti = st.text_input(
@@ -896,9 +937,13 @@ if st.session_state.haku_tehty:
                             if submit_nappi:
                                 if uusi_raportti:
                                     tallenna_raportti(t_num, uusi_raportti)
-                                    st.success("Kiitos! Raportti tallennettiin.")
+                                    st.success(
+                                        "Kiitos! Raportti tallennettiin."
+                                    )
                                 else:
-                                    st.warning("Kirjoita ensin jotain raporttiin.")
+                                    st.warning(
+                                        "Kirjoita ensin jotain raporttiin."
+                                    )
 
                         tallennetut_raportit = hae_raportit(t_num)
                         if tallennetut_raportit:
@@ -909,27 +954,40 @@ if st.session_state.haku_tehty:
                                     unsafe_allow_html=True,
                                 )
                         else:
-                            st.caption("Ei vielä raportteja tässä tietokannassa.")
+                            st.caption(
+                                "Ei vielä raportteja tässä tietokannassa."
+                            )
 
                         st.divider()
 
                         st.markdown("#### 💬 Matkustajien live-chat")
-                        with st.form(key=f"chat_form_{t_num}", clear_on_submit=True):
+                        with st.form(
+                            key=f"chat_form_{t_num}", clear_on_submit=True
+                        ):
                             c_col1, c_col2 = st.columns([1, 2])
                             with c_col1:
                                 nimimerkki = st.text_input(
-                                    "Nimimerkki", value="Matkustaja", max_chars=20
+                                    "Nimimerkki",
+                                    value="Matkustaja",
+                                    max_chars=20,
                                 )
                             with c_col2:
                                 uusi_viesti = st.text_input(
-                                    "Viesti", placeholder="Kirjoita jotain junan tunnelmasta..."
+                                    "Viesti",
+                                    placeholder=(
+                                        "Kirjoita jotain junan tunnelmasta..."
+                                    ),
                                 )
 
-                            laheta_chat_nappi = st.form_submit_button("Lähetä viesti chattiin")
+                            laheta_chat_nappi = st.form_submit_button(
+                                "Lähetä viesti chattiin"
+                            )
 
                             if laheta_chat_nappi:
                                 if uusi_viesti.strip():
-                                    tallenna_chat_viesti(t_num, nimimerkki, uusi_viesti)
+                                    tallenna_chat_viesti(
+                                        t_num, nimimerkki, uusi_viesti
+                                    )
                                     st.rerun()
                                 else:
                                     st.warning("Viesti ei voi olla tyhjä.")
@@ -950,27 +1008,33 @@ if st.session_state.haku_tehty:
                         st.divider()
 
                         st.markdown(
-                            "#### 🗺️ Laajennettu vaunukartta ja tarkat palvelutietueet"
+                            "#### 🗺️ Laajennettu vaunukartta ja tarkat"
+                            " palvelutietueet"
                         )
 
                         vaunut = []
                         veturit = []
-                        komp_url = (
-                            f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
-                        )
+                        komp_url = f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
                         try:
                             komp_vastaus = requests.get(komp_url)
                             if komp_vastaus.status_code == 200:
                                 komp_data = komp_vastaus.json()
-                                sections = komp_data.get("journeySections", [])
+                                sections = komp_data.get(
+                                    "journeySections", []
+                                )
                                 if sections:
                                     vaunut = sections[0].get("wagons", [])
-                                    veturit = sections[0].get("locomotives", [])
+                                    veturit = sections[0].get(
+                                        "locomotives", []
+                                    )
                         except:
                             pass
 
                         if veturit:
-                            v_tyypit = [v.get("locomotiveType", "Veturiyksikkö") for v in veturit]
+                            v_tyypit = [
+                                v.get("locomotiveType", "Veturiyksikkö")
+                                for v in veturit
+                            ]
                             veturi_maara = len(veturit)
                             veturi_teksti = (
                                 f"kahdella veturilla ({', '.join(v_tyypit)})"
@@ -979,27 +1043,34 @@ if st.session_state.haku_tehty:
                             )
                             if t_tyyppi == "S":
                                 st.info(
-                                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) – Sähkömoottorijuna."
+                                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) –"
+                                    " Sähkömoottorijuna."
                                 )
                             elif t_tyyppi in ["HL", "H"]:
                                 st.info(
-                                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5) – Moottorijunayksikkö."
+                                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5)"
+                                    " – Moottorijunayksikkö."
                                 )
                             else:
-                                st.info(f"🚂 **Veturitiedot:** Junaa vedetään {veturi_teksti}.")
+                                st.info(
+                                    "🚂 **Veturitiedot:** Junaa vedetään"
+                                    f" {veturi_teksti}."
+                                )
                         else:
                             if t_tyyppi == "S":
                                 st.info(
-                                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) – Sähkömoottorijuna."
+                                    "🚄 **Kalustotyyppi:** Pendolino (Sm3) –"
+                                    " Sähkömoottorijuna."
                                 )
                             elif t_tyyppi in ["HL", "H"]:
                                 st.info(
-                                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5) – Moottorijunayksikkö."
+                                    "🚆 **Kalustotyyppi:** Flirt-lähijuna (Sm5)"
+                                    " – Moottorijunayksikkö."
                                 )
                             else:
                                 st.info(
-                                    "🚂 **Veturitiedot:** Ei erillisiä veturitietoja"
-                                    " saatavilla."
+                                    "🚂 **Veturitiedot:** Ei erillisiä"
+                                    " veturitietoja saatavilla."
                                 )
 
                         if not vaunut:
@@ -1044,7 +1115,7 @@ if st.session_state.haku_tehty:
                                         "pet": False,
                                         "accessible": False,
                                         "bicycle": False,
-                                    }
+                                    },
                                 ]
                             elif t_tyyppi == "S":
                                 vaunut = [
@@ -1090,16 +1161,38 @@ if st.session_state.haku_tehty:
                             for w in vaunut:
                                 w_tyyppi = w.get("wagonType", "Vaunu")
                                 w_nro = w.get("salesNumber", "-")
-                                w_wifi = "Wi-Fi 📶" if w.get("wifi", False) else ""
-                                w_pet = "Lemmikkivaunu 🐾" if w.get("pet", False) else ""
-                                w_acc = "Esteetön ♿" if w.get("accessible", False) else ""
-                                w_bike = "Pyöräpaikka 🚲" if w.get("bicycle", False) else ""
-                                palvelut = ", ".join([p for p in [w_wifi, w_pet, w_acc, w_bike] if p])
+                                w_wifi = (
+                                    "Wi-Fi 📶" if w.get("wifi", False) else ""
+                                )
+                                w_pet = (
+                                    "Lemmikkivaunu 🐾"
+                                    if w.get("pet", False)
+                                    else ""
+                                )
+                                w_acc = (
+                                    "Esteetön ♿"
+                                    if w.get("accessible", False)
+                                    else ""
+                                )
+                                w_bike = (
+                                    "Pyöräpaikka 🚲"
+                                    if w.get("bicycle", False)
+                                    else ""
+                                )
+                                palvelut = ", ".join([
+                                    p
+                                    for p in [w_wifi, w_pet, w_acc, w_bike]
+                                    if p
+                                ])
                                 v_data.append({
                                     "Vaununumero": w_nro,
                                     "Tyyppi": w_tyyppi,
-                                    "Palvelut": palvelut if palvelut else "Perusvaunu"
+                                    "Palvelut": (
+                                        palvelut if palvelut else "Perusvaunu"
+                                    ),
                                 })
                             st.table(pd.DataFrame(v_data))
                         else:
-                            st.caption("Vaunukoostumustietoja ei saatavilla.")
+                            st.caption(
+                                "Vaunukoostumustietoja ei saatavilla."
+                            )
