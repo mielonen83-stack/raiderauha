@@ -18,11 +18,8 @@ if "rauharaportit" not in st.session_state:
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
 
-# --- KÄVIJÄLASKURI ---
-if "kavijat" not in st.session_state:
-    st.session_state.kavijat = 1
-else:
-    st.session_state.kavijat += 1
+if "paivan_vitsi" not in st.session_state:
+    st.session_state.paivan_vitsi = "Miksi juna pysähtyi keskelle metsää? – Konduktööri unohti pyyhkiä pyyhkijät pois päältä! 🚂💨"
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
@@ -85,6 +82,22 @@ st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
 # Pikavalinnat / Suosikit
+if st.sidebar.button("🃏 Arvo uusi matkavitsi", use_container_width=True):
+    if ai_kaytossa:
+        try:
+            prompt = "Keksi uusi, lyhyt ja hauska vitsi tai puujalka junamatkustamisesta, konduktööreistä tai rautateistä. Vain vitsi suoraan."
+            vastaus = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=80
+            )
+            st.session_state.paivan_vitsi = vastaus.choices[0].message.content
+        except:
+            pass
+
+st.sidebar.info(f"💡 **Matkavitsi:**\n\n\"{st.session_state.paivan_vitsi}\"")
+st.sidebar.divider()
+
 if st.session_state.suosikit:
     st.sidebar.markdown("### ⭐ Suosikkireitit")
     for idx, (s_lahto, s_paikka) in enumerate(st.session_state.suosikit):
@@ -112,10 +125,6 @@ lahto = asema_dict[valittu_lahto_nimi]["koodi"]
 paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
 hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
-
-# Kävijälaskurin näyttäminen sivupalkin alaosassa
-st.sidebar.divider()
-st.sidebar.caption(f"👀 **Sivukatselut tässä istunnossa:** {st.session_state.kavijat}")
 
 # --- PÄÄSIVU ---
 st.title("🚆 Raiderauha")
