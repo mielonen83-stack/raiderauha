@@ -7,6 +7,7 @@ import requests
 import sqlite3
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit_autorefresh import st_autorefresh
 
 # Sivun perusasetukset ja SEO-otsikko
 st.set_page_config(
@@ -252,7 +253,7 @@ def hae_junan_historia_luotettavuus(juna_numero):
     return (int(juna_numero) * 3) % 15
 
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=15)
 def hae_junan_sijainti(juna_numero):
     url = f"https://rata.digitraffic.fi/api/v1/train-locations/latest/{juna_numero}"
     try:
@@ -305,6 +306,15 @@ tekoaly_tervehdys = hae_tekoaly_tervehdys()
 
 # --- SIVUPALKKI & ASETUKSET ---
 st.sidebar.markdown(f'🤖 *"{tekoaly_tervehdys}"*')
+st.sidebar.divider()
+
+# Automaattinen live-päivitys ohjaus
+live_paivitys_paalla = st.sidebar.checkbox(
+    "🔄 Automaattinen live-kartan päivitys (15s)", value=True
+)
+if live_paivitys_paalla:
+    st_autorefresh(interval=15000, key="raiderauha_live_refresh")
+
 st.sidebar.divider()
 
 st.sidebar.markdown("### 🚨 Viralliset rataliikennehäiriöt & tiedotteet")
