@@ -54,7 +54,7 @@ paikka = asema_dict[valittu_paikka_nimi]
 if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}**")
-    st.info("📡 Haetaan vain tulevia ja parhaillaan kulkevia junavuoroja (Suomen aika)...")
+    st.info("📡 Suodatetaan tarkasti vain tämän päivän tulevat ja kulkevat vuorot...")
     st.divider()
     
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
@@ -69,7 +69,6 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
             st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
         else:
             aktiiviset_junat = []
-            # Korjattu: Käytetään suoraan Suomen aikaa (Europe/Helsinki)
             suomi_aika = ZoneInfo("Europe/Helsinki")
             nyt = datetime.now(suomi_aika)
             
@@ -100,10 +99,11 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                             saapumis_aika_str = dt_obj.strftime('%H:%M')
                             saapumis_dt = dt_obj
                 
-                # Verrataan tarkasti Suomen aikaan perustuvia aikoja
+                # TARKISTUS: Otetaan mukaan vain ne junat, joiden päivämäärä on TÄNÄÄN JA lähtöaika on tulevaisuudessa (tai juna kulkee nyt)
                 if lahto_dt and saapumis_dt:
-                    if lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt):
-                        
+                    is_today = lahto_dt.date() == nyt.date()
+                    
+                    if is_today and (lahto_dt >= nyt or (lahto_dt <= nyt <= saapumis_dt)):
                         if nyt < lahto_dt:
                             tila = "⏳ Lähtee pian"
                         else:
@@ -119,9 +119,9 @@ if st.sidebar.button("🔍 Etsi tulevat junat ja seuranta", type="primary"):
                         })
             
             if not aktiiviset_junat:
-                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet).")
+                st.warning("⚠️ Tälle välille ei löytynyt enää tälle päivälle lähteviä tai matkassa olevia junia. (Kaikki päivän vuorot ovat jo menneet tai huomisen junat eivät näy vielä).")
             else:
-                st.success(f"Löytyi {len(aktiiviset_junat)} tulevaa / matkassa olevaa junaa!")
+                st.success(f"Löytyi {len(aktiiviset_junat)} tulevaa / matkassa olevaa junaa tälle päivälle!")
                 
                 for juna in aktiiviset_junat:
                     t_num = juna["numero"]
