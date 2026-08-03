@@ -13,48 +13,54 @@ st.set_page_config(
 st.title("🚆 Raiderauha")
 st.markdown("### Etsi rauhallinen ja sujuva matkustuskokemus suomalaisissa junissa.")
 
+# Haetaan asemat Digitrafficin rajapinnasta, jotta saadaan oikeat nimet ja lyhenneteet
+@st.cache_data
+def hae_asemat():
+    url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
+    try:
+        vastaus = requests.get(url)
+        if vastaus.status_code == 200:
+            asemat = vastaus.json()
+            # Suodatetaan vain matkustajaliikenteen asemat, joilla on nimi
+            matkustajasektori = [a for a in asemat if a.get('passengerTraffic') == True]
+            # Tehdään sanakirja: "Helsinki (HKI)" -> "HKI"
+            asema_lista = {f"{a['stationName']} ({a['stationShortCode']})": a['stationShortCode'] for a in matkustajasektori}
+            return asema_lista
+    except:
+        pass
+    # Varakartta jos rajapinnassa häiriö
+    return {"Helsinki (HKI)": "HKI", "Tampere (TPE)": "TPE", "Turku (TKU)": "TKU", "Oulu (OULU)": "OULU"}
+
+asema_dict = hae_asemat()
+asema_nimet = list(asema_dict.keys())
+
 # Sivupalkin hakuehdot
-st.sidebar.header("🎛️ Hakuehdot")
+st.sidebar.header("🎛️ Matkan tiedot")
 
-# Suositut asemat helpottamaan valintaa
-asemat_valinta = st.sidebar.selectbox(
-    "Valitse suosittu reitti tai syötä omat lyhenteet:",
-    ["Helsinki – Tampere (HKI - TPE)", "Helsinki – Turku (HKI - TKU)", "Helsinki – Oulu (HKI - OULU)", "Muu (kirjoita itse)"]
-)
+# Valitaan lähtö- ja määränpääasema pudotusvalikoista
+oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
+oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
 
-if "Helsinki – Tampere" in asemat_valinta:
-    oletus_lahto = "HKI"
-    oletus_paikka = "TPE"
-elif "Helsinki – Turku" in asemat_valinta:
-    oletus_lahto = "HKI"
-    oletus_paikka = "TKU"
-elif "Helsinki – Oulu" in asemat_valinta:
-    oletus_lahto = "HKI"
-    oletus_paikka = "OULU"
-else:
-    oletus_lahto = "HKI"
-    oletus_paikka = "TPE"
+valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
+valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-lahtoasema = st.sidebar.text_input("Lähtöasema (lyhenne)", value=oletus_lahto)
-maaranpaa = st.sidebar.text_input("Määränpää (lyhenne)", value=oletus_paikka)
-
-lahto = lahtoasema.upper().strip()
-paikka = maaranpaa.upper().strip()
+lahto = asema_dict[valittu_lahto_nimi]
+paikka = asema_dict[valittu_paikka_nimi]
 
 # Hakunappi
 if st.button("🔍 Etsi junat ja rauhan paikat", type="primary"):
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/{lahto}/{paikka}"
     
-    with st.spinner(f"Etsitään junia välille {lahto} – {paikka}..."):
+    with st.spinner(f"Etsitään junia väliltä {valittu_lahto_nimi} – {valittu_paikka_nimi}..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
         junat = vastaus.json()
         
         if not junat:
-            st.warning(f"Ei löytynyt junia välille {lahto} – {paikka}. Tarkista asemalyhenteet.")
+            st.warning(f"Ei löytynyt suoria junia valitsemallesi välille. Kokeile toisia asemia.")
         else:
-            st.success(f"Löytyi {len(junat)} junaa tälle välille!")
+            st.success(f"Löytyi {len(junat)} junaa!")
             
             # Käydään junia läpi
             for juna in junat:
@@ -62,11 +68,9 @@ if st.button("🔍 Etsi junat ja rauhan paikat", type="primary"):
                 train_type = juna.get('trainType')
                 cancelled = juna.get('cancelled', False)
                 
-                # Jos juna on peruttu, ohitetaan se
                 if cancelled:
                     continue
                 
-                # Etsitään lähtö- ja saapumisajat kyseisille asemille
                 timeTable = juna.get('timeTableRows', [])
                 lahto_aika = ""
                 saapumis_aika = ""
@@ -81,19 +85,19 @@ if st.button("🔍 Etsi junat ja rauhan paikat", type="primary"):
                         if aika_str:
                             saapumis_aika = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
 
-                # Korttimainen esitys jokaiselle junalle
+                # Korttimainen esitys
                 with st.expander(f"🚆 Juna {train_type} {train_num} | Lähtö klo {lahto_aika} -> Perillä klo {saapumis_aika}"):
                     col1, col2 = st.columns(2)
                     
                     with col1:
                         st.markdown("**Matkatiedot:**")
-                        st.write(f"- Lähtöasema: **{lahto}** klo **{lahto_aika}**")
-                        st.write(f"- Määränpää: **{paikka}** klo **{saapumis_aika}**")
-                        st.write(f"- Junatyyppi: {train_type}")
+                        st.write(f"- Lähtö: **{valittu_lahto_nimi}** klo **{lahto_aika}**")
+                        st.write(f"- Perillä: **{valittu_paikka_nimi}** klo **{saapumis_aika}**")
+                        st.write(f"- Junatyyppi: {train_type} {train_num}")
                     
                     with col2:
                         st.markdown("**Vinkit rauhalliseen matkaan:**")
-                        st.info("💡 Vinkki: Ravintolavaunun läheisyydessä voi olla vilkkaampaa. Etsi paikka mahdollisimman kaukaa vaunujen päistä tai valitse Ekstra-luokka, jos kaipaat täydellistä hiljaisuutta.")
+                        st.info("💡 **Rauhavinkki:** Valitse paikka vaunun keskivaiheilta, kauempaa ovista ja vessakopeista. Ravintolavaunun läheisyydessä on usein enemmän liikehdintää, kun taas Ekstra-luokka tarjoaa maksimaalista hiljaisuutta.")
             
     else:
-        st.error(f"Virhe tiedon haussa (koodi {vastaus.status_code}). Tarkista asemalyhenteet.")
+        st.error(f"Virhe tiedon haussa (koodi {vastaus.status_code}). Yritä hetken päästä uudelleen.")
