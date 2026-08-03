@@ -241,7 +241,7 @@ def hae_junan_sijainti(juna_numero):
       data = vastaus.json()
       if data and isinstance(data, list) and len(data) > 0:
         sijainti_info = data[0]
-         koordinaatit = sijainti_info.get("location", {}).get("coordinates", [])
+        koordinaatit = sijainti_info.get("location", {}).get("coordinates", [])
         # Digitraffic palauttaa [lon, lat]
         if len(koordinaatit) == 2:
           lon, lat = koordinaatit
