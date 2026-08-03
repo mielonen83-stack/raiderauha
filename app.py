@@ -270,34 +270,30 @@ if hakunappi:
                                 if a_aika:
                                     dt_obj = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).astimezone(suomi_aika)
                                     
-                                    # Ladataan reaaliaikainen arvio: lisätään myöhästymisminuutit suoraan aikatauluun
+                                    # Reaaliaikainen arvio: lisätään myöhästymisminuutit suoraan aikatauluun
                                     reaaliaika_dt = dt_obj + timedelta(minutes=myohassa)
                                     klo = reaaliaika_dt.strftime('%H:%M')
+                                    
+                                    # Tarkistetaan myös onko arvioitu aika jo menneisyydessä verrattuna nykyhetkeen
+                                    onko_kello_mennyt_ohi = reaaliaika_dt <= nyt
+                                    
+                                    aktiivinen_tila = onko_mennyt or onko_kello_mennyt_ohi
                                     
                                     if s_koodi not in asemat_map:
                                         asemat_map[s_koodi] = {
                                             "asema": s_koodi,
                                             "aika": klo,
                                             "myohassa": myohassa,
-                                            "aktiivinen": onko_mennyt
+                                            "aktiivinen": aktiivinen_tila
                                         }
                                     else:
-                                        if onko_mennyt:
+                                        if aktiivinen_tila:
                                             asemat_map[s_koodi]["aktiivinen"] = True
                             
                             if s_koodi == paikka and rivi.get('type') == 'ARRIVAL':
                                 break
                         
                         asemat_matkalla = list(asemat_map.values())
-                        
-                        # --- MONOTONINEN LUKITUSLOGIIKKA ---
-                        found_future = False
-                        for asema_info in asemat_matkalla:
-                            if found_future:
-                                asema_info["aktiivinen"] = False
-                            else:
-                                if not asema_info["aktiivinen"]:
-                                    found_future = True
                         
                         if asemat_matkalla:
                             for asema_info in asemat_matkalla:
