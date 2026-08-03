@@ -351,7 +351,7 @@ valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
 lahto = asema_dict[valittu_lahto_nimi]["koodi"]
 paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
-hakunappi = st.sidebar.button("🔍 Etsi junat ja Raidetutka", type="primary")
+hakunappi = st.sidebar.button("🔍 Raidetutka", type="primary")
 
 if hakunappi:
     st.session_state.haku_tehty = True
@@ -569,12 +569,12 @@ if st.session_state.haku_tehty:
             f" arviolta **{saastetty_co2:.1f} kg CO₂** -päästöjä!"
         )
 
-    st.info("📡 Haetaan aikatauluja ja Digitrafficin tietoja...")
+    st.info("📡 Raidetutka hakee aikatauluja ja Digitrafficin tietoja...")
     st.divider()
 
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}?departure_date={valittu_pvm.strftime('%Y-%m-%d')}"
 
-    with st.spinner("Etsitään sopivia junavuoroja..."):
+    with st.spinner("Raidetutka etsii sopivia junavuoroja..."):
         vastaus = requests.get(url)
 
     if vastaus.status_code == 200:
@@ -661,9 +661,9 @@ if st.session_state.haku_tehty:
                 )
             else:
                 st.success(
-                    f"Löytyi {len(aktiiviset_junat)} junavuoroja!"
+                    f"Raidetutka löysi {len(aktiiviset_junat)} junavuoroja!"
                     if len(aktiiviset_junat) > 1
-                    else "Löytyi 1 junavuoro!"
+                    else "Raidetutka löysi 1 junavuoron!"
                 )
 
                 for juna in aktiiviset_junat:
@@ -791,13 +791,6 @@ if st.session_state.haku_tehty:
                                 "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä"
                                 " hetkellä saatavilla."
                             )
-
-                        st.divider()
-
-                        # Junan jakaminen / Pikajakolinkki
-                        st.markdown("#### 🔗 Jaa junan tiedot kaverille")
-                        jaettava_teksti = f"Hei! Olen matkassa junalla {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi.split(' (')[0]} (raide {l_raide}) -> {valittu_paikka_nimi.split(' (')[0]} (raide {s_raide}). Tsekkaa Raidetutkasta tilanne!"
-                        st.code(jaettava_teksti, language="text")
 
                         st.divider()
 
