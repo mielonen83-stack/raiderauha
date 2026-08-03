@@ -122,6 +122,11 @@ def hae_rautatie_hairiot():
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
+# Luodaan käänteinen hakemisto koodista nimeen nopeutta varten
+koodi_to_nimi = {}
+for nimi, tiedot in asema_dict.items():
+  koodi_to_nimi[tiedot["koodi"]] = nimi.split(" (")[0]
+
 
 # --- TEKOÄLYN LYHYT TERVEHDYS ---
 @st.cache_data(ttl=3600)
@@ -363,6 +368,11 @@ if st.session_state.haku_tehty:
             naytetaan = False
             for rivi in timeTable:
               s_koodi = rivi.get("stationShortCode")
+
+              # Otetaan mukaan vain ne rivit, jotka löytyvät varsinaisesta asema-kokoelmasta
+              if s_koodi not in koodi_to_nimi:
+                continue
+
               if s_koodi == lahto and rivi.get("type") == "DEPARTURE":
                 naytetaan = True
 
@@ -406,13 +416,9 @@ if st.session_state.haku_tehty:
                     else ""
                 )
 
-                # Muunnetaan lyhenne kokonaiseksi nimeksi
+                # Haetaan suoraan puhtaana nimenä sanakirjasta
                 lyhenne = asema_info["asema"]
-                kokonainen_nimi = lyhenne
-                for nimi, tiedot in asema_dict.items():
-                  if tiedot["koodi"] == lyhenne:
-                    kokonainen_nimi = nimi.split(" (")[0]
-                    break
+                kokonainen_nimi = koodi_to_nimi.get(lyhenne, lyhenne)
 
                 st.write(
                     f"{tila_emoji} **{kokonainen_nimi}** – klo"
