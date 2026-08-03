@@ -62,7 +62,7 @@ if st.button("🔍 Etsi junat ja rauhan paikat", type="primary"):
                 train_type = juna.get('trainType')
                 cancelled = juna.get('cancelled', False)
                 
-                # Jos juna on peruttu, näytetään se varoituksena
+                # Jos juna on peruttu, ohitetaan se
                 if cancelled:
                     continue
                 
@@ -86,13 +86,13 @@ if st.button("🔍 Etsi junat ja rauhan paikat", type="primary"):
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        st.write(**"Matkatiedot:"**)
+                        st.markdown("**Matkatiedot:**")
                         st.write(f"- Lähtöasema: **{lahto}** klo **{lahto_aika}**")
                         st.write(f"- Määränpää: **{paikka}** klo **{saapumis_aika}**")
                         st.write(f"- Junatyyppi: {train_type}")
                     
                     with col2:
-                        st.write(**"Vinkit rauhalliseen matkaan:"**)
+                        st.markdown("**Vinkit rauhalliseen matkaan:**")
                         st.info("💡 Vinkki: Ravintolavaunun läheisyydessä voi olla vilkkaampaa. Etsi paikka mahdollisimman kaukaa vaunujen päistä tai valitse Ekstra-luokka, jos kaipaat täydellistä hiljaisuutta.")
             
     else:
