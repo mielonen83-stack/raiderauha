@@ -11,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Alustetaan muistit sessionstateen oikein heti alussa
+# Alustetaan muistit sessionstateen
 if "rauharaportit" not in st.session_state:
     st.session_state.rauharaportit = {}
 
@@ -57,16 +57,7 @@ asema_nimet = list(asema_dict.keys())
 # --- SIVUPALKKI & ASETUKSET ---
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
-# Teemavalitsin
-teema = st.sidebar.selectbox("Teema", ["Raikas vaalea", "Tumma tila (Dark)"])
-if teema == "Tumma tila (Dark)":
-    st.markdown("""
-        <style>
-        .stApp { background-color: #0e1117; color: #ffffff; }
-        </style>
-    """, unsafe_allow_html=True)
-
-# Pikavalinnat / Suosikit (korjattu kutsu: st.session_state)
+# Pikavalinnat / Suosikit
 if st.session_state.suosikit:
     st.sidebar.markdown("### ⭐ Suosikkireitit")
     for idx, (s_lahto, s_paikka) in enumerate(st.session_state.suosikit):
