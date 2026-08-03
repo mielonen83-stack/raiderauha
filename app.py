@@ -86,20 +86,6 @@ paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
 hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
 
-# --- MAINOSOSIO SIVUPALKISSA ---
-st.sidebar.divider()
-st.sidebar.markdown("### 📢 Kumppanit ja Mainokset")
-st.sidebar.markdown(
-    """
-    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border: 1px dashed #d3d3d3; text-align: center;">
-        <p style="font-size: 12px; color: #666; margin-bottom: 4px;">MAINOS</p>
-        <p style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;">☕ Kahvila & Leipomo Asemalla</p>
-        <p style="font-size: 13px; color: #444; margin-bottom: 10px;">Nappaa tuore kahvi ja korvapuusti mukaan junaan -15% näyttämällä tätä sovellusta!</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
 st.title("🚆 Raiderauha")
 st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet, sää ja matkustajien live-raportit*")
 st.divider()
