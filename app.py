@@ -65,16 +65,16 @@ asema_nimet = list(asema_dict.keys())
 def hae_tekoaly_tervehdys():
     if ai_kaytossa:
         try:
-            prompt = "Kirjoita lyhyt, 1-2 lauseen pituinen hauska, itseironinen ja hyväntuulinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen. Viittaa vaikka myöhästymisiin tai kovaäänisiin kanssamatkustajiin huumorilla."
+            prompt = "Kirjoita lyhyt, 1-2 lauseen pituinen hauska, itseironinen ja hyväntuulinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen. Viittaa vaikka myöhästymisiin tai kovaäänisiin kanssamatkustajiin huumorilla. Älä katkaise lausetta kesken."
             vastaus = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=70
+                max_tokens=100
             )
             return vastaus.choices[0].message.content
         except:
             pass
-    return "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään ja kaiman kännykkäpeli on äänettömällä. 🚆😂"
+    return "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään ja kanssamatkustajien puhelimet ovat äänettömällä. 🚆😂"
 
 tekoaly_tervehdys = hae_tekoaly_tervehdys()
 
@@ -275,8 +275,8 @@ if hakunappi:
                         if ai_kaytossa:
                             with st.spinner("🤖 Tekoälyn Rauhavahti analysoi hermojen kestävyyttä..."):
                                 try:
-                                    prompt = f"Olet sarkastinen ja hauska matkaoppaan assistentti (Rauhavahti). Anna lyhyt, humoristinen ja oivaltava vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}, varoita mahdollisista häiriötekijöistä (kuten itkevät lapset, kovaääniset puhelupuhujat tai kahvilavaunun ruuhkat) ja heitä pieni vitsi."
-                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=160)
+                                    prompt = f"Olet sarkastinen ja hauska matkaoppaan assistentti (Rauhavahti). Anna lyhyt, humoristinen ja oivaltava vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}, varoita mahdollisista häiriötekijöistä (kuten itkevät lapset, kovaääniset puhelupuhujat tai kahvilavaunun ruuhkat) ja heitä loppuun joku hauska juna-aiheinen kuitti. Kirjoita vastauksesi kokonaan loppuun asti äläkä katkaise sitä kesken lauseen."
+                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=250)
                                     st.info(f"🤖 **Tekoälyn Rauhavahti-analyysi:**\n\n{completion.choices[0].message.content}")
                                 except:
                                     pass
