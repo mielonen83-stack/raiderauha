@@ -4,20 +4,19 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 from openai import OpenAI
 
-# Sivun perusasetukset
+# Sivun perusasetukset ja teeman tarkistus
 st.set_page_config(
     page_title="Raiderauha – Älykäs Junatutka & Rauhavahti", 
     page_icon="🚆", 
     layout="wide"
 )
 
-st.title("🚆 Raiderauha")
-st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet ja matkustajien live-raportit*")
-st.divider()
-
-# Alustetaan muisti matkustajien rauharaporteille sessionstateen
+# Alustetaan muistit sessionstateen
 if "rauharaportit" not in st.session_state:
     st.session_state.rauharaportit = {}
+
+if "suosikit" not in st.session_state:
+    st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
@@ -26,7 +25,7 @@ try:
 except:
     ai_kaytossa = False
 
-# Haetaan asemat Digitrafficin rajapinnasta
+# Haetaan asemat Digitrafficin rajapinnasta (mukaan lukien koordinaatit säätä varten)
 @st.cache_data
 def hae_asemat():
     url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
@@ -35,36 +34,104 @@ def hae_asemat():
         if vastaus.status_code == 200:
             asemat = vastaus.json()
             matkustajasektori = [a for a in asemat if a.get('passengerTraffic') == True]
-            asema_lista = {f"{a['stationName']} ({a['stationShortCode']})": a['stationShortCode'] for a in matkustajasektori}
+            asema_lista = {}
+            for a in matkustajasektori:
+                nimi = f"{a['stationName']} ({a['stationShortCode']})"
+                asema_lista[nimi] = {
+                    "koodi": a['stationShortCode'],
+                    "lat": a.get('latitude'),
+                    "lon": a.get('longitude')
+                }
             return asema_lista
     except:
         pass
-    return {"Helsinki (HKI)": "HKI", "Joensuu (JNS)": "JNS", "Tampere (TPE)": "TPE"}
+    return {
+        "Helsinki (HKI)": {"koodi": "HKI", "lat": 60.1719, "lon": 24.9414}, 
+        "Joensuu (JNS)": {"koodi": "JNS", "lat": 62.5998, "lon": 29.7634},
+        "Tampere (TPE)": {"koodi": "TPE", "lat": 61.5033, "lon": 23.7733}
+    }
 
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
-# Sivupalkin hakuehdot
-st.sidebar.header("🎛️ Matkan tiedot & Kalenteri")
-oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
-oletus_paikka_idx = asema_nimet.index("Joensuu (JNS)") if "Joensuu (JNS)" in asema_nimet else 1
+# --- SIVUPALKKI & ASETUKSET ---
+st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
+
+# Teemavalitsin
+teema = st.sidebar.selectbox("Teema", ["Raikas vaalea", "Tumma tila (Dark)"])
+if teema == "Tumma tila (Dark)":
+    st.markdown("""
+        <style>
+        .stApp { background-color: #0e1117; color: #ffffff; }
+        </style>
+    """, unsafe_allow_html=True)
+
+# Pikavalinnat / Suosikit
+if st.sidebar.session_state.suosikit:
+    st.sidebar.markdown("### ⭐ Suosikkireitit")
+    for idx, (s_lahto, s_paikka) in enumerate(st.sidebar.session_state.suosikit):
+        if st.sidebar.button(f"{s_lahto} ➔ {s_paikka}", key=f"suosikki_{idx}"):
+            st.session_state.valittu_lahto = s_lahto
+            st.session_state.valittu_paikka = s_paikka
+
+# Valinnat
+oletus_lahto_idx = asema_nimet.index(st.session_state.get("valittu_lahto", "Helsinki (HKI)")) if st.session_state.get("valittu_lahto", "Helsinki (HKI)") in asema_nimet else 0
+oletus_paikka_idx = asema_nimet.index(st.session_state.get("valittu_paikka", "Joensuu (JNS)")) if st.session_state.get("valittu_paikka", "Joensuu (JNS)") in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-# Päivämääräkalenteri
+# Tallenna suosikkeihin -painike
+if st.sidebar.button("❤️ Tallenna suosikkireitiksi"):
+    uusi_suosikki = (valittu_lahto_nimi, valittu_paikka_nimi)
+    if uusi_suosikki not in st.session_state.suosikit:
+        st.session_state.suosikit.append(uusi_suosikki)
+        st.sidebar.success("Reitti tallennettu suosikkeihin!")
+
 valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
 
-lahto = asema_dict[valittu_lahto_nimi]
-paikka = asema_dict[valittu_paikka_nimi]
+lahto = asema_dict[valittu_lahto_nimi]["koodi"]
+paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
-if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
+hakunappi = st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary")
+
+# --- MAINOSOSIO SIVUPALKISSA ---
+st.sidebar.divider()
+st.sidebar.markdown("### 📢 Kumppanit ja Mainokset")
+st.sidebar.markdown(
+    """
+    <div style="background-color: #f0f2f6; padding: 12px; border-radius: 8px; border: 1px dashed #d3d3d3; text-align: center;">
+        <p style="font-size: 12px; color: #666; margin-bottom: 4px;">MAINOS</p>
+        <p style="font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px;">☕ Kahvila & Leipomo Asemalla</p>
+        <p style="font-size: 13px; color: #444; margin-bottom: 10px;">Nappaa tuore kahvi ja korvapuusti mukaan junaan -15% näyttämällä tätä sovellusta!</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.title("🚆 Raiderauha")
+st.markdown("##### *Reaaliaikainen junatutka, tekoälyn rauha-alueet, sää ja matkustajien live-raportit*")
+st.divider()
+
+if hakunappi:
     
     st.markdown(f"### 🗺️ Reitti: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})")
+    
+    # --- HAE SÄÄÄNNÖT MÄÄRÄNPÄÄHÄN (Open-Meteo API) ---
+    p_lat = asema_dict[valittu_paikka_nimi].get("lat")
+    p_lon = asema_dict[valittu_paikka_nimi].get("lon")
+    if p_lat and p_lon:
+        try:
+            sää_url = f"https://api.open-meteo.com/v1/forecast?latitude={p_lat}&longitude={p_lon}&current=temperature_2m,weather_code"
+            s_vast = requests.get(sää_url).json()
+            lampo = s_vast['current']['temperature_2m']
+            st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}):** {lampo}°C")
+        except:
+            pass
+
     st.info("📡 Haetaan aikatauluja ja Digitrafficin tietoja...")
     st.divider()
     
-    # Käytetään kaikille päiville luotettavaa live-trains endpointtia
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}?departure_date={valittu_pvm.strftime('%Y-%m-%d')}"
     
     with st.spinner("Etsitään sopivia junavuoroja..."):
@@ -186,6 +253,13 @@ if st.sidebar.button("🔍 Etsi junat ja Rauhavahti", type="primary"):
                                         delta=myoha_str if myoha_str else None
                                     )
                         
+                        # --- JATKOYHTEYKSIEN TARKISTUS ---
+                        viimeinen_asema = asemat_matkalla[-1] if asemat_matkalla else None
+                        if viimeinen_asema and viimeinen_asema["myohassa"] > 0:
+                            st.warning(f"⚠️ **Vaihdot vaarassa:** Juna on tällä hetkellä noin {viimeinen_asema['myohassa']} minuuttia myöhässä perille saapuessa. Tarkista jatkoyhteydet!")
+                        else:
+                            st.success("✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussaan, vaihto jatkokulkuun sujuu hyvin.")
+
                         st.divider()
                         
                         # --- TEKOÄLYN RAUHAVAHTI ---
