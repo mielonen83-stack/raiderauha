@@ -601,6 +601,8 @@ if st.session_state.haku_tehty:
                 saapumis_aika_str = ""
                 lahto_dt = None
                 saapumis_dt = None
+                lahto_raide = "-"
+                saapumis_raide = "-"
 
                 for rivi in timeTable:
                     if (
@@ -608,6 +610,7 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "DEPARTURE"
                     ):
                         aika_str = rivi.get("scheduledTime")
+                        lahto_raide = rivi.get("commercialTrack", "-")
                         if aika_str:
                             dt_obj = datetime.fromisoformat(
                                 aika_str.replace("Z", "+00:00")
@@ -619,6 +622,7 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "ARRIVAL"
                     ):
                         aika_str = rivi.get("scheduledTime")
+                        saapumis_raide = rivi.get("commercialTrack", "-")
                         if aika_str:
                             dt_obj = datetime.fromisoformat(
                                 aika_str.replace("Z", "+00:00")
@@ -644,6 +648,8 @@ if st.session_state.haku_tehty:
                             "tyyppi": train_type,
                             "lahto": lahto_aika_str,
                             "saapuminen": saapumis_aika_str,
+                            "lahto_raide": lahto_raide,
+                            "saapumis_raide": saapumis_raide,
                             "aikataulu": timeTable,
                             "tila": tila,
                         })
@@ -664,6 +670,8 @@ if st.session_state.haku_tehty:
                     t_num = juna["numero"]
                     t_tyyppi = juna["tyyppi"]
                     status_teksti = juna["tila"]
+                    l_raide = juna["lahto_raide"]
+                    s_raide = juna["saapumis_raide"]
 
                     # Haetaan vaunut suodatusta varten
                     vaunut = []
@@ -752,8 +760,7 @@ if st.session_state.haku_tehty:
                         luotettavuus_taso = "⚠️ Usein myöhässä"
 
                     with st.expander(
-                        f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä"
-                        f" klo {juna['saapuminen']} ({status_teksti})"
+                        f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} (Raide {l_raide}) ➔ Perillä klo {juna['saapuminen']} (Raide {s_raide}) [{status_teksti}]"
                     ):
 
                         st.info(
@@ -789,7 +796,7 @@ if st.session_state.haku_tehty:
 
                         # Junan jakaminen / Pikajakolinkki
                         st.markdown("#### 🔗 Jaa junan tiedot kaverille")
-                        jaettava_teksti = f"Hei! Olen matkassa junalla {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi.split(' (')[0]} -> {valittu_paikka_nimi.split(' (')[0]}. Tsekkaa Raidetutkasta tilanne!"
+                        jaettava_teksti = f"Hei! Olen matkassa junalla {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi.split(' (')[0]} (raide {l_raide}) -> {valittu_paikka_nimi.split(' (')[0]} (raide {s_raide}). Tsekkaa Raidetutkasta tilanne!"
                         st.code(jaettava_teksti, language="text")
 
                         st.divider()
@@ -818,6 +825,7 @@ if st.session_state.haku_tehty:
                             if naytetaan and s_koodi:
                                 a_aika = rivi.get("scheduledTime")
                                 myohassa = rivi.get("differenceInMinutes", 0)
+                                raide = rivi.get("commercialTrack", "-")
                                 onko_mennyt = (
                                     rivi.get("actualTime") is not None
                                 )
@@ -849,6 +857,7 @@ if st.session_state.haku_tehty:
                                             "asema": s_koodi,
                                             "aika": klo,
                                             "myohassa": myohassa,
+                                            "raide": raide,
                                             "aktiivinen": aktiivinen_tila,
                                         }
                                     else:
@@ -875,6 +884,11 @@ if st.session_state.haku_tehty:
                                     if asema_info["myohassa"] > 0
                                     else ""
                                 )
+                                raide_str = (
+                                    f" (Raide {asema_info['raide']})"
+                                    if asema_info["raide"] != "-"
+                                    else ""
+                                )
                                 lyhenne = asema_info["asema"]
                                 kokonainen_nimi = koodi_to_nimi.get(
                                     lyhenne, lyhenne
@@ -882,7 +896,7 @@ if st.session_state.haku_tehty:
 
                                 st.write(
                                     f"{tila_emoji} **{kokonainen_nimi}** – klo"
-                                    f" {asema_info['aika']}{myoha_str}"
+                                    f" {asema_info['aika']}{raide_str}{myoha_str}"
                                 )
 
                         viimeinen_asema = (
@@ -918,8 +932,8 @@ if st.session_state.haku_tehty:
                                 f" mukaisesti.\n\n"
                                 f"Matkatiedot:\n"
                                 f"- Junavuoro: {t_tyyppi} {t_num}\n"
-                                f"- Reitti: {valittu_lahto_nimi.split(' ')[0]} ➔"
-                                f" {valittu_paikka_nimi.split(' ')[0]}\n"
+                                f"- Reitti: {valittu_lahto_nimi.split(' ')[0]} (Raide {l_raide}) ➔"
+                                f" {valittu_paikka_nimi.split(' ')[0]} (Raide {s_raide})\n"
                                 f"- Matkustuspäivä: {valittu_pvm.strftime('%d.%m.%Y')}\n"
                                 f"- Myöhästyminen perillä: noin {maaranpaa_myohassa} minuuttia"
                                 f" ({prosentti}% hyvitys lipun hinnasta)\n\n"
