@@ -289,8 +289,9 @@ if hakunappi:
                         asemat_matkalla = list(asemat_map.values())
                         
                         if asemat_matkalla:
-                            cols = st.columns(min(len(asemat_matkalla), 6))
-                            for idx, asema_info in enumerate(asemat_matkalla[:6]):
+                            # Näytetään nyt 8 ensimmäistä asemaa kerralla
+                            cols = st.columns(min(len(asemat_matkalla), 8))
+                            for idx, asema_info in enumerate(asemat_matkalla[:8]):
                                 with cols[idx]:
                                     tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
                                     myoha_str = f" (+{asema_info['myohassa']} min)" if asema_info['myohassa'] > 0 else ""
