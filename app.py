@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import sqlite3
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from openai import OpenAI
 
@@ -251,7 +251,7 @@ if hakunappi:
                     status_teksti = juna["tila"]
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']} ({status_teksti})"):
-                        st.markdown("#### 📍 Junan koko reitin aikataulu ja pysähdykset")
+                        st.markdown("#### 📍 Junan koko reitin reaaliaikainen aikataulu")
                         
                         timeTable = juna["aikataulu"]
                         asemat_map = {}
@@ -269,7 +269,11 @@ if hakunappi:
                                 
                                 if a_aika:
                                     dt_obj = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).astimezone(suomi_aika)
-                                    klo = dt_obj.strftime('%H:%M')
+                                    
+                                    # Ladataan reaaliaikainen arvio: lisätään myöhästymisminuutit suoraan aikatauluun
+                                    reaaliaika_dt = dt_obj + timedelta(minutes=myohassa)
+                                    klo = reaaliaika_dt.strftime('%H:%M')
+                                    
                                     if s_koodi not in asemat_map:
                                         asemat_map[s_koodi] = {
                                             "asema": s_koodi,
@@ -287,9 +291,6 @@ if hakunappi:
                         asemat_matkalla = list(asemat_map.values())
                         
                         # --- MONOTONINEN LUKITUSLOGIIKKA ---
-                        # Varmistetaan, että heti kun vastaan tulee ensimmäinen asema,
-                        # jota ei ole kuitattu (aktiivinen = False), kaikki sen jälkeiset
-                        # asemat pakotetaan pysymään odottavina (⏳).
                         found_future = False
                         for asema_info in asemat_matkalla:
                             if found_future:
