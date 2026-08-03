@@ -1,17 +1,25 @@
 import streamlit as st
 import requests
 from datetime import datetime
+from openai import OpenAI
 
 # Sivun perusasetukset
 st.set_page_config(
-    page_title="Raiderauha – Visuaalinen vaunukartta", 
+    page_title="Raiderauha – Älykäs tekoälytutka", 
     page_icon="🚆", 
     layout="wide"
 )
 
 st.title("🚆 Raiderauha")
-st.markdown("##### *Visuaalinen junatutka ja graafinen vaunukartta*")
+st.markdown("##### *Tekoälyllä tehostettu junatutka ja vaunukartta*")
 st.divider()
+
+# Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
+try:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    ai_kaytossa = True
+except:
+    ai_kaytossa = False
 
 # Haetaan asemat Digitrafficin rajapinnasta
 @st.cache_data
@@ -42,17 +50,17 @@ valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=
 lahto = asema_dict[valittu_lahto_nimi]
 paikka = asema_dict[valittu_paikka_nimi]
 
-if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
+if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
     
-    with st.spinner("Haetaan junia ja luodaan vaunukarttaa..."):
+    with st.spinner("Haetaan junia ja pyydetään tekoälyä analysoimaan reittiä..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
         junat = vastaus.json()
         
         if not isinstance(junat, list):
-            st.warning("Ei löytynyt suoria junia valitsemallesi välille tai aikataulutietoja ei ole saatavilla.")
+            st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
         else:
             aktiiviset_junat = []
             for juna in junat:
@@ -96,6 +104,21 @@ if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
                     t_tyyppi = juna["tyyppi"]
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']}"):
+                        
+                        # Tekoälyn analyysi tästä junasta
+                        if ai_kaytossa:
+                            with st.spinner("🤖 Tekoäly analysoi junan rauhaisuutta..."):
+                                try:
+                                    prompt = f"Olet VR:n matkaoppaan assistentti. Anna lyhyt, oivaltava ja ystävällinen rauhallisuussuositus junalle {t_tyyppi} {t_num}, joka lähtee klo {juna['lahto']} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}. Kerro, mihin vaunuun kannattaa mennä ja mitä välttää."
+                                    completion = client.chat.completions.create(
+                                        model="gpt-4o-mini",
+                                        messages=[{"role": "user", "content": prompt}],
+                                        max_tokens=150
+                                    ai_analyysi = completion.choices.message.content
+                                    st.info(f"🤖 **Tekoälyn rauharaportti:**\n\n{ai_analyysi}")
+                                except:
+                                    st.info("💡 *Tekoälyanalyysi ei tavoittanut palvelua tällä hetkellä.*")
+                        
                         st.markdown("#### 🗺️ Junan vaunukartta")
                         st.write("Junan kokoonpano veturista alkaen (⬅️ Veturi | Takaosa ➡️):")
                         
@@ -130,18 +153,14 @@ if st.sidebar.button("🔍 Etsi junat ja vaunukartta", type="primary"):
                                     {"wagonType": "Vaunu", "salesNumber": "3"}
                                 ]
                         
-                        # Piirretään vaunut Streamlitin omilla st.columns-sarakkeilla ja mittareilla
                         cols = st.columns(len(vaunut) if len(vaunut) <= 8 else 8)
                         for idx, v in enumerate(vaunut[:8]):
                             v_nimi = v.get('wagonType', 'Vaunu')
                             v_nro = v.get('salesNumber', str(idx+1))
                             with cols[idx]:
                                 st.metric(label=f"Vaunu {v_nro}", value=v_nimi)
-                        
-                        st.markdown("---")
-                        st.info("💡 **Rauhavinkki:** Ekstra-luokka (vihreä/erikoismalli) tarjoaa hiljaisuutta. Vältä ravintolavaunun viereisiä vaunuja, jos haluat matkustaa ilman häiriöitä.")
 
     else:
         st.error("Virhe haettaessa junatietoja.")
 else:
-    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja vaunukartta**.")
+    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja kysy tekoälyltä**.")
