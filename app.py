@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta
 from math import atan2, cos, radians, sin, sqrt
 from zoneinfo import ZoneInfo
 from openai import OpenAI
+import pandas as pd
 import requests
 import sqlite3
 import streamlit as st
@@ -200,13 +201,12 @@ def hae_aseman_tiedotteet(asema_koodi):
   return []
 
 
-# --- OPTIMOITU HISTORIALLINEN LUOTETTAVUUS (Viimeiset 3 päivää) ---
+# --- OPTIMOITU HISTORIALLINEN LUOTETTAVUUS ---
 @st.cache_data(ttl=3600)
 def hae_junan_historia_luotettavuus(juna_numero):
   summa_minuutit = 0
   loytyneet_paivat = 0
 
-  # Käydään läpi viimeiset 3 päivää taaksepäin (nopea ja kevyt rajapinnalle)
   for i in range(1, 4):
     tutkittava_pvm = (date.today() - timedelta(days=i)).strftime("%Y-%m-%d")
     url = (
@@ -225,12 +225,31 @@ def hae_junan_historia_luotettavuus(juna_numero):
     except:
       pass
 
-  # Jos historiatietoja löytyi, palautetaan todellinen keskiarvo
   if loytyneet_paivat > 0:
     return round(summa_minuutit / loytyneet_paivat)
 
-  # Fallback: jos dataa ei suoraan löydy historiasta
   return (int(juna_numero) * 3) % 15
+
+
+# --- UUSI: JUNAN REAALIAIKAINEN SIJAINTI JA NOPEUS ---
+@st.cache_data(ttl=30)  # Tuoretta dataa, päivittyy usein
+def hae_junan_sijainti(juna_numero):
+  url = f"https://rata.digitraffic.fi/api/v1/train-locations/latest/{juna_numero}"
+  try:
+    vastaus = requests.get(url, timeout=2)
+    if vastaus.status_code == 200:
+      data = vastaus.json()
+      if data and isinstance(data, list) and len(data) > 0:
+        sijainti_info = data[0]
+         koordinaatit = sijainti_info.get("location", {}).get("coordinates", [])
+        # Digitraffic palauttaa [lon, lat]
+        if len(koordinaatit) == 2:
+          lon, lat = koordinaatit
+          nopeus = sijainti_info.get("speed", 0)
+          return {"lat": lat, "lon": lon, "nopeus": nopeus}
+  except:
+    pass
+  return None
 
 
 asema_dict = hae_asemat()
@@ -535,7 +554,7 @@ if st.session_state.haku_tehty:
           t_tyyppi = juna["tyyppi"]
           status_teksti = juna["tila"]
 
-          # Haetaan historiallinen keskiarvomyöhästyminen viimeisiltä päiviltä
+          # Haetaan historiallinen keskiarvomyöhästyminen
           historia_myohassa = hae_junan_historia_luotettavuus(t_num)
           if historia_myohassa < 5:
             luotettavuus_taso = "⭐⭐⭐⭐⭐ Erittäin luotettava"
@@ -549,13 +568,37 @@ if st.session_state.haku_tehty:
               f" klo {juna['saapuminen']} ({status_teksti})"
           ):
 
-            # --- LUOTETTAVUUSINDEKSI ESILLE ---
+            # --- LUOTETTAVUUSINDEKSI JA REAALIAIKAINEN SIJAINTI ---
             st.info(
                 f"📊 **Historiallinen luotettavuusindeksi:** Tämä vuoro"
                 f" ({t_tyyppi} {t_num}) on ollut viime päivinä"
                 f" keskimäärin **{historia_myohassa} minuuttia** myöhässä."
                 f" Arvio: {luotettavuus_taso}"
             )
+
+            # --- JUNAN LIVE-SIJAINTI JA KARTTA ---
+            sijainti_data = hae_junan_sijainti(t_num)
+            if sijainti_data:
+              j_lat = sijainti_data["lat"]
+              j_lon = sijainti_data["lon"]
+              j_nopeus = sijainti_data["nopeus"]
+              kmh_nopeus = round(j_nopeus * 3.6)  # Muunnetaan m/s -> km/h
+
+              st.success(
+                  f"📍 **Live-sijainti & nopeus:** Juna etenee tällä hetkellä"
+                  f" nopeudella **{kmh_nopeus} km/h**."
+              )
+
+              # Piirretään kartta Streamlitin omalla st.map():lla
+              df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
+              st.map(df_kartta, zoom=7, use_container_width=True)
+            else:
+              st.caption(
+                  "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä hetkellä"
+                  " saatavilla (juna ei ehkä ole vielä liikkeellä tai se on"
+                  " pysähtynyt)."
+              )
+
             st.divider()
 
             st.markdown("#### 📍 Junan koko reitin reaaliaikainen aikataulu")
