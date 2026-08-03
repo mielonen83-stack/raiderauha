@@ -267,6 +267,8 @@ if hakunappi:
                             if naytetaan and s_koodi:
                                 a_aika = rivi.get('scheduledTime')
                                 myohassa = rivi.get('differenceInMinutes', 0)
+                                
+                                # Tarkistetaan vain todellisen toteutuneen ajan perusteella (actualTime)
                                 onko_mennyt = rivi.get('actualTime') is not None
                                 
                                 if a_aika:
@@ -289,7 +291,6 @@ if hakunappi:
                         asemat_matkalla = list(asemat_map.values())
                         
                         if asemat_matkalla:
-                            # Näytetään kaikki reitin asemat siistinä listana/riveinä, jotta näkyy koko matka perille asti
                             for asema_info in asemat_matkalla:
                                 tila_emoji = "✅" if asema_info["aktiivinen"] else "⏳"
                                 myoha_str = f" (+{asema_info['myohassa']} min myöhässä)" if asema_info['myohassa'] > 0 else ""
