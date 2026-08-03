@@ -308,7 +308,6 @@ tekoaly_tervehdys = hae_tekoaly_tervehdys()
 st.sidebar.markdown(f'🤖 *"{tekoaly_tervehdys}"*')
 st.sidebar.divider()
 
-# Automaattinen live-päivitys ohjaus
 live_paivitys_paalla = st.sidebar.checkbox(
     "🔄 Automaattinen live-kartan päivitys (15s)", value=True
 )
@@ -337,7 +336,7 @@ if ratatyot:
         st.sidebar.info(f"🛠️ **{t_ots}**\n\n{t_ing}")
 else:
     st.sidebar.caption(
-        "Ei aktiivisia ilmoitetuita ratatöitä tai hidastuksia tällä hetkellä."
+        "Ei aktiivisia ilmoitettuja ratatöitä tai hidastuksia tällä hetkellä."
     )
 
 st.sidebar.divider()
@@ -411,53 +410,144 @@ st.sidebar.caption(
 # --- PÄÄSIVU ---
 st.title("🚆 Raiderauha")
 st.markdown(
-    "##### *Reaaliaikainen junatutka, tarkat vaunukoostumukset, sää ja"
-    " matkustajien live-raportit*"
+    "##### *Reaaliaikainen junatutka, viralliset laiturinäytöt, vaunukoostumukset"
+    " ja matkustajien live-raportit*"
 )
 st.divider()
 
-st.markdown("### 🚉 Aseman live-tilanne & Radan sää")
-a_tab1, a_tab2 = st.tabs(
-    [
-        f"Aseman ({valittu_lahto_nimi.split(' ')[0]}) tulevat junat",
-        "Radan varren tuuli- ja säätiedot",
-    ]
+# --- UUSI OMINAISUUS: VIRALLINEN LAITURINÄYTTÖ ---
+st.markdown(
+    f"### 📺 Virallinen Laiturinäyttö – {valittu_lahto_nimi.split(' ')[0]}"
+)
+st.caption(
+    "Reaaliaikainen asemanäyttö, joka vastaa rautatieaseman laitureiden"
+    " virallisia infotauluja."
 )
 
-with a_tab1:
-    st.caption(
-        f"Näytetään reaaliaikaiset saapuvat ja lähtevät vuorot asemalta"
-        f" {valittu_lahto_nimi}."
-    )
-    aseman_junat = hae_aseman_junat(lahto)
-    if aseman_junat:
-        a_data = []
-        for aj in aseman_junat[:10]:
+laituri_tab1, laituri_tab2 = st.tabs(["🚂 Lähtevät junat", "📥 Saapuvat junat"])
+suomi_aika = ZoneInfo("Europe/Helsinki")
+aseman_junat_data = hae_aseman_junat(lahto)
+
+with laituri_tab1:
+    if aseman_junat_data:
+        l_lahto_rivit = []
+        for aj in aseman_junat_data:
             t_num = aj.get("trainNumber")
             t_tyyppi = aj.get("trainType")
             cancelled = aj.get("cancelled", False)
-            for r in aj.get("timeTableRows", []):
+            timetable = aj.get("timeTableRows", [])
+
+            # Etsitään lähtötiedot tältä asemalta
+            for r in timetable:
                 if r.get("stationShortCode") == lahto and r.get("type") == "DEPARTURE":
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
                     track = r.get("commercialTrack", "-")
                     if sch:
                         dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(
-                            ZoneInfo("Europe/Helsinki")
+                            suomi_aika
                         )
-                        a_data.append({
+                        # Selvitetään pääteasema
+                        paateasema_koodi = timetable[-1].get("stationShortCode")
+                        paateasema_nimi = koodi_to_nimi.get(
+                            paateasema_koodi, paateasema_koodi
+                        )
+
+                        l_lahto_rivit.append({
+                            "Aika": dt.strftime("%H:%M"),
                             "Juna": f"{t_tyyppi} {t_num}",
-                            "Aikataulu": dt.strftime("%H:%M"),
-                            "Myöhässä": f"+{diff} min" if diff > 0 else "Ajallaan",
+                            "Määränpää": paateasema_nimi,
                             "Raide": track,
-                            "Peruttu": "Kyllä ❌" if cancelled else "Ei 🟢",
+                            "Tila": (
+                                "Peruttu ❌"
+                                if cancelled
+                                else (
+                                    f"+{diff} min myöhässä"
+                                    if diff > 0
+                                    else "Ajallaan 🟢"
+                                )
+                            ),
+                            "sort_aika": dt,
                         })
-        if a_data:
-            st.dataframe(pd.DataFrame(a_data), use_container_width=True)
+        if l_lahto_rivit:
+            l_lahto_rivit = sorted(l_lahto_rivit, key=lambda x: x["sort_aika"])
+            df_lahto = pd.DataFrame(l_lahto_rivit).drop(columns=["sort_aika"])
+            st.dataframe(df_lahto, use_container_width=True)
         else:
-            st.info("Ei aktiivisia lähtöjä tällä hetkellä tältä asemalta.")
+            st.info("Ei lähteviä junia tällä hetkellä.")
     else:
-        st.info("Asemadataa ei voitu hakea.")
+        st.info("Asemanäyttödataa ei voitu hakea.")
+
+with laituri_tab2:
+    if aseman_junat_data:
+        l_saapuu_rivit = []
+        for aj in aseman_junat_data:
+            t_num = aj.get("trainNumber")
+            t_tyyppi = aj.get("trainType")
+            cancelled = aj.get("cancelled", False)
+            timetable = aj.get("timeTableRows", [])
+
+            for r in timetable:
+                if r.get("stationShortCode") == lahto and r.get("type") == "ARRIVAL":
+                    sch = r.get("scheduledTime")
+                    diff = r.get("differenceInMinutes", 0)
+                    track = r.get("commercialTrack", "-")
+                    if sch:
+                        dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(
+                            suomi_aika
+                        )
+                        # Mistä juna tulee (ensimmäinen asema)
+                        lahtoasema_koodi = timetable[0].get("stationShortCode")
+                        lahtoasema_nimi = koodi_to_nimi.get(
+                            lahtoasema_koodi, lahtoasema_koodi
+                        )
+
+                        l_saapuu_rivit.append({
+                            "Aika": dt.strftime("%H:%M"),
+                            "Juna": f"{t_tyyppi} {t_num}",
+                            "Lähtöpaikka": lahtoasema_nimi,
+                            "Raide": track,
+                            "Tila": (
+                                "Peruttu ❌"
+                                if cancelled
+                                else (
+                                    f"+{diff} min myöhässä"
+                                    if diff > 0
+                                    else "Ajallaan 🟢"
+                                )
+                            ),
+                            "sort_aika": dt,
+                        })
+        if l_saapuu_rivit:
+            l_saapuu_rivit = sorted(l_saapuu_rivit, key=lambda x: x["sort_aika"])
+            df_saapuu = pd.DataFrame(l_saapuu_rivit).drop(columns=["sort_aika"])
+            st.dataframe(df_saapuu, use_container_width=True)
+        else:
+            st.info("Ei saapuvia junia tällä hetkellä.")
+    else:
+        st.info("Asemanäyttödataa ei voitu hakea.")
+
+st.divider()
+
+st.markdown("### 🚉 Muut asematiedot & Radan sää")
+a_tab1, a_tab2 = st.tabs([
+    "Aseman poikkeustiedotteet",
+    "Radan varren tuuli- ja säätiedot",
+])
+
+with a_tab1:
+    st.caption(
+        f"Viralliset tiedotteet ja häiriöilmoitukset asemalta"
+        f" {valittu_lahto_nimi}."
+    )
+    asema_tiedotteet = hae_aseman_tiedotteet(lahto)
+    if asema_tiedotteet:
+        for tiedote in asema_tiedotteet[:3]:
+            t_otsikko = tiedote.get("title", "Tiedote")
+            t_ingressi = tiedote.get("ingress", "")
+            st.info(f"🔊 **{t_otsikko}**\n\n{t_ingressi}")
+    else:
+        st.success("Ei erillisiä asemakohtaisia poikkeustiedotteita.")
 
 with a_tab2:
     st.caption(
@@ -484,21 +574,6 @@ if st.session_state.haku_tehty:
         f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔"
         f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
     )
-
-    st.markdown(
-        f"📢 **Lähtöaseman ({valittu_lahto_nimi.split(' ')[0]}) ajankohtaiset"
-        " laituritiedotteet & häiriöt:**"
-    )
-    asema_tiedotteet = hae_aseman_tiedotteet(lahto)
-    if asema_tiedotteet:
-        for tiedote in asema_tiedotteet[:2]:
-            t_otsikko = tiedote.get("title", "Tiedote")
-            t_ingressi = tiedote.get("ingress", "")
-            st.info(f"🔊 **{t_otsikko}**\n\n{t_ingressi}")
-    else:
-        st.caption("Ei erillisiä asemakohtaisia poikkeustiedotteita.")
-
-    st.divider()
 
     l_lat = asema_dict[valittu_lahto_nimi].get("lat")
     l_lon = asema_dict[valittu_lahto_nimi].get("lon")
@@ -554,7 +629,6 @@ if st.session_state.haku_tehty:
             )
         else:
             aktiiviset_junat = []
-            suomi_aika = ZoneInfo("Europe/Helsinki")
             nyt = datetime.now(suomi_aika)
 
             for juna in junat:
