@@ -114,7 +114,8 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
                                         model="gpt-4o-mini",
                                         messages=[{"role": "user", "content": prompt}],
                                         max_tokens=150
-                                    ai_analyysi = completion.choices.message.content
+                                    )
+                                    ai_analyysi = completion.choices[0].message.content
                                     st.info(f"🤖 **Tekoälyn rauharaportti:**\n\n{ai_analyysi}")
                                 except:
                                     st.info("💡 *Tekoälyanalyysi ei tavoittanut palvelua tällä hetkellä.*")
