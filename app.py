@@ -4,7 +4,6 @@ from zoneinfo import ZoneInfo
 from openai import OpenAI
 import pandas as pd
 import requests
-import sqlite3
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
@@ -30,97 +29,15 @@ ga_script = f"""
       gtag('config', '{GA_MEASUREMENT_ID}');
     </script>
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Raidetutka on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja matkustajien live-raportit." />
+    <meta name="description" content="Raidetutka on älykäs junatutka, joka näyttää VR:n reaaliaikaiset aikataulut, rataliikennehäiriöt, sää ja junien live-sijainnit." />
     <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka" />
 """
 components.html(ga_script, height=0, width=0)
 
-
-# --- TIETOKANNAN ALUSTUS ---
-def alusta_tietokanta():
-    yhteys = sqlite3.connect("rauharaportit.db")
-    kursori = yhteys.cursor()
-    kursori.execute("""
-        CREATE TABLE IF NOT EXISTS raportit (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            juna_numero TEXT,
-            raportti TEXT,
-            aika TEXT
-        )
-    """)
-    kursori.execute("""
-        CREATE TABLE IF NOT EXISTS chat_viestit (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            juna_numero TEXT,
-            nimimerkki TEXT,
-            viesti TEXT,
-            aika TEXT
-        )
-    """)
-    yhteys.commit()
-    yhteys.close()
-
-
-alusta_tietokanta()
-
-
-def tallenna_raportti(juna_numero, raportti_teksti):
-    yhteys = sqlite3.connect("rauharaportit.db")
-    kursori = yhteys.cursor()
-    aikaleima = datetime.now(ZoneInfo("Europe/Helsinki")).strftime(
-        "%d.%m.%Y klo %H:%M"
-    )
-    kursori.execute(
-        "INSERT INTO raportit (juna_numero, raportti, aika) VALUES (?, ?, ?)",
-        (str(juna_numero), raportti_teksti, aikaleima),
-    )
-    yhteys.commit()
-    yhteys.close()
-
-
-def hae_raportit(juna_numero):
-    yhteys = sqlite3.connect("rauharaportit.db")
-    kursori = yhteys.cursor()
-    kursori.execute(
-        "SELECT raportti, aika FROM raportit WHERE juna_numero = ? ORDER BY id"
-        " DESC",
-        (str(juna_numero),),
-    )
-    tulokset = kursori.fetchall()
-    yhteys.close()
-    return tulokset
-
-
-def tallenna_chat_viesti(juna_numero, nimimerkki, viesti):
-    yhteys = sqlite3.connect("rauharaportit.db")
-    kursori = yhteys.cursor()
-    aikaleima = datetime.now(ZoneInfo("Europe/Helsinki")).strftime("%H:%M")
-    kursori.execute(
-        "INSERT INTO chat_viestit (juna_numero, nimimerkki, viesti, aika) VALUES"
-        " (?, ?, ?, ?)",
-        (str(juna_numero), nimimerkki, viesti, aikaleima),
-    )
-    yhteys.commit()
-    yhteys.close()
-
-
-def hae_chat_viestit(juna_numero):
-    yhteys = sqlite3.connect("rauharaportit.db")
-    kursori = yhteys.cursor()
-    kursori.execute(
-        "SELECT nimimerkki, viesti, aika FROM chat_viestit WHERE juna_numero = ?"
-        " ORDER BY id ASC",
-        (str(juna_numero),),
-    )
-    tulokset = kursori.fetchall()
-    yhteys.close()
-    return tulokset
-
-
 if "suosikit" not in st.session_state:
     st.session_state.suosikit = [("Helsinki (HKI)", "Joensuu (JNS)")]
 
-# --- LISÄYS 1: Seuratut junat -tilamuuttuja ---
+# Seuratut junat -tilamuuttuja
 if "seuratut_junat" not in st.session_state:
     st.session_state.seuratut_junat = ["23"]
 
@@ -348,7 +265,7 @@ else:
 st.sidebar.divider()
 st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 
-# --- LISÄYS 1: Seuratut junat -käyttöliittymä sivupalkkiin ---
+# Seuratut junat -käyttöliittymä sivupalkissa
 st.sidebar.markdown("### ⭐ Seuratut junat")
 seurattava_input = st.sidebar.text_input(
     "Lisää junanumero seurantaan", placeholder="Esim. 67"
@@ -372,7 +289,7 @@ for j_nro in st.session_state.seuratut_junat:
 
 st.sidebar.divider()
 
-# --- LISÄYS 3: Esteettömyys- ja palvelusuodattimet sivupalkkiin ---
+# Esteettömyys- ja palvelusuodattimet sivupalkissa
 st.sidebar.markdown("### ♿ Palvelusuodattimet hakulle")
 vaadi_pyora = st.sidebar.checkbox("🚲 Pyöräpaikka vaaditaan")
 vaadi_lemmikki = st.sidebar.checkbox("🐾 Lemmikkivaunu vaaditaan")
@@ -449,7 +366,7 @@ st.sidebar.caption(
 st.title("🚆 Raidetutka")
 st.markdown(
     "##### *Reaaliaikainen junatutka, viralliset laiturinäytöt, vaunukoostumukset"
-    " ja matkustajien live-raportit*"
+    " ja matkatiedot*"
 )
 st.divider()
 
@@ -812,7 +729,7 @@ if st.session_state.haku_tehty:
                                 },
                             ]
 
-                    # --- LISÄYS 3: Suodatustarkistus ---
+                    # Suodatustarkistus
                     onko_pyora = any(w.get("bicycle", False) for w in vaunut)
                     onko_lemmikki = any(w.get("pet", False) for w in vaunut)
                     onko_esteeton = any(
@@ -870,7 +787,7 @@ if st.session_state.haku_tehty:
 
                         st.divider()
 
-                        # --- LISÄYS 2: Junan jakaminen / Pikajakolinkki ---
+                        # Junan jakaminen / Pikajakolinkki
                         st.markdown("#### 🔗 Jaa junan tiedot kaverille")
                         jaettava_teksti = f"Hei! Olen matkassa junalla {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi.split(' (')[0]} -> {valittu_paikka_nimi.split(' (')[0]}. Tsekkaa Raidetutkasta tilanne!"
                         st.code(jaettava_teksti, language="text")
@@ -1043,88 +960,6 @@ if st.session_state.haku_tehty:
                                     )
                                 except:
                                     pass
-
-                        st.markdown("#### 🗣️ Matkustajien live-raportit")
-
-                        with st.form(key=f"form_{t_num}"):
-                            uusi_raportti = st.text_input(
-                                f"Ilmoita tunnelma tälle junalle ({t_num}):",
-                                placeholder="Esim. Vaunu 3 superhiljainen",
-                            )
-                            submit_nappi = st.form_submit_button(
-                                "Lähetä raportti tietokantaan"
-                            )
-
-                            if submit_nappi:
-                                if uusi_raportti:
-                                    tallenna_raportti(t_num, uusi_raportti)
-                                    st.success(
-                                        "Kiitos! Raportti tallennettiin."
-                                    )
-                                else:
-                                    st.warning(
-                                        "Kirjoita ensin jotain raporttiin."
-                                    )
-
-                        tallennetut_raportit = hae_raportit(t_num)
-                        if tallennetut_raportit:
-                            for r_teksti, r_aika in tallennetut_raportit:
-                                st.write(
-                                    f"💬 *\"{r_teksti}\"* — <small"
-                                    f" style='color: gray;'>({r_aika})</small>",
-                                    unsafe_allow_html=True,
-                                )
-                        else:
-                            st.caption(
-                                "Ei vielä raportteja tässä tietokannassa."
-                            )
-
-                        st.divider()
-
-                        st.markdown("#### 💬 Matkustajien live-chat")
-                        with st.form(
-                            key=f"chat_form_{t_num}", clear_on_submit=True
-                        ):
-                            c_col1, c_col2 = st.columns([1, 2])
-                            with c_col1:
-                                nimimerkki = st.text_input(
-                                    "Nimimerkki",
-                                    value="Matkustaja",
-                                    max_chars=20,
-                                )
-                            with c_col2:
-                                uusi_viesti = st.text_input(
-                                    "Viesti",
-                                    placeholder=(
-                                        "Kirjoita jotain junan tunnelmasta..."
-                                    ),
-                                )
-
-                            laheta_chat_nappi = st.form_submit_button(
-                                "Lähetä viesti chattiin"
-                            )
-
-                            if laheta_chat_nappi:
-                                if uusi_viesti.strip():
-                                    tallenna_chat_viesti(
-                                        t_num, nimimerkki, uusi_viesti
-                                    )
-                                    st.rerun()
-                                else:
-                                    st.warning("Viesti ei voi olla tyhjä.")
-
-                        historia = hae_chat_viestit(t_num)
-                        if historia:
-                            chat_container = st.container(height=200)
-                            with chat_container:
-                                for nimiv, viestiv, aikav in historia:
-                                    st.markdown(
-                                        f"**{nimiv}** <small style='color: gray;'>({aikav})</small>:"
-                                        f" {viestiv}",
-                                        unsafe_allow_html=True,
-                                    )
-                        else:
-                            st.caption("Ei viestejä vielä.")
 
                         st.divider()
 
