@@ -29,7 +29,6 @@ def alusta_tietokanta():
 
 alusta_tietokanta()
 
-# Apufunktiot tietokannan käyttöön
 def tallenna_raportti(juna_numero, raportti_teksti):
     yhteys = sqlite3.connect("rauharaportit.db")
     kursori = yhteys.cursor()
@@ -53,14 +52,12 @@ if "suosikit" not in st.session_state:
 if "paivan_vitsi" not in st.session_state:
     st.session_state.paivan_vitsi = "Miksi juna pysähtyi keskelle metsää? – Konduktööri unohti pyyhkiä pyyhkijät pois päältä! 🚂💨"
 
-# Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
 try:
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     ai_kaytossa = True
 except:
     ai_kaytossa = False
 
-# Haetaan asemat Digitrafficin rajapinnasta
 @st.cache_data
 def hae_asemat():
     url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
@@ -89,21 +86,21 @@ def hae_asemat():
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
-# --- TEKOÄLYN HAUSKA TERVEHDYS ---
+# --- TEKOÄLYN LYHYT TERVEHDYS ---
 @st.cache_data(ttl=3600)
 def hae_tekoaly_tervehdys():
     if ai_kaytossa:
         try:
-            prompt = "Kirjoita lyhyt, 1-2 lauseen pituinen hauska, itseironinen ja hyväntuulinen tervehdys juna-matkustajalle, joka avaa Raiderauha-sovelluksen. Viittaa vaikka myöhästymisiin tai kovaäänisiin kanssamatkustajiin huumorilla. Älä katkaise lausetta kesken."
+            prompt = "Kirjoita korkeintaan 1 lauseen mittainen, hauska ja sarkastinen tervehdys junamatkustajalle. Vain suora lause."
             vastaus = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=100
+                max_tokens=40
             )
             return vastaus.choices[0].message.content
         except:
             pass
-    return "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään ja kanssamatkustajien puhelimet ovat äänettömällä. 🚆😂"
+    return "Tervetuloa Raiderauhaan! Toivottavasti juna kulkee tänään edes sinnepäin. 🚆😂"
 
 tekoaly_tervehdys = hae_tekoaly_tervehdys()
 
@@ -116,11 +113,11 @@ st.sidebar.header("🎛️ Matkan tiedot & Asetukset")
 if st.sidebar.button("🃏 Arvo uusi matkavitsi", use_container_width=True):
     if ai_kaytossa:
         try:
-            prompt = "Keksi uusi, lyhyt ja hauska vitsi tai puujalka junamatkustamisesta, konduktööreistä tai rautateistä. Vain vitsi suoraan."
+            prompt = "Keksi lyhyt ja hauska vitsi junamatkustamisesta. Vain vitsi suoraan."
             vastaus = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=80
+                max_tokens=50
             )
             st.session_state.paivan_vitsi = vastaus.choices[0].message.content
         except:
@@ -136,7 +133,6 @@ if st.session_state.suosikit:
             st.session_state.valittu_lahto = s_lahto
             st.session_state.valittu_paikka = s_paikka
 
-# Valinnat
 oletus_lahto_idx = asema_nimet.index(st.session_state.get("valittu_lahto", "Helsinki (HKI)")) if st.session_state.get("valittu_lahto", "Helsinki (HKI)") in asema_nimet else 0
 oletus_paikka_idx = asema_nimet.index(st.session_state.get("valittu_paikka", "Joensuu (JNS)")) if st.session_state.get("valittu_paikka", "Joensuu (JNS)") in asema_nimet else 1
 
@@ -269,12 +265,8 @@ if hakunappi:
                                 
                                 if a_aika:
                                     dt_obj = datetime.fromisoformat(a_aika.replace('Z', '+00:00')).astimezone(suomi_aika)
-                                    
-                                    # Reaaliaikainen arvio: lisätään myöhästymisminuutit suoraan aikatauluun
                                     reaaliaika_dt = dt_obj + timedelta(minutes=myohassa)
                                     klo = reaaliaika_dt.strftime('%H:%M')
-                                    
-                                    # Tarkistetaan myös onko arvioitu aika jo menneisyydessä verrattuna nykyhetkeen
                                     onko_kello_mennyt_ohi = reaaliaika_dt <= nyt
                                     
                                     aktiivinen_tila = onko_mennyt or onko_kello_mennyt_ohi
@@ -304,30 +296,30 @@ if hakunappi:
                         # --- JATKOYHTEYKSIEN TARKISTUS ---
                         viimeinen_asema = asemat_matkalla[-1] if asemat_matkalla else None
                         if viimeinen_asema and viimeinen_asema["myohassa"] > 0:
-                            st.warning(f"⚠️ **Vaihdot vaarassa:** Juna on tällä hetkellä noin {viimeinen_asema['myohassa']} minuuttia myöhässä perille saapuessa. Juoksujalkaa vaihtoon!")
+                            st.warning(f"⚠️ **Vaihdot vaarassa:** Juna on noin {viimeinen_asema['myohassa']} min myöhässä perille saapuessa.")
                         else:
-                            st.success("✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussaan, ehtii ehkä jopa kahville.")
+                            st.success("✅ **Vaihtoyhteydet:** Juna näyttäisi olevan aikataulussa.")
 
                         st.divider()
                         
-                        # --- TEKOÄLYN RAUHAVAHTI (HUUMORIVERSIO) ---
+                        # --- TEKOÄLYN RAUHAVAHTI (LYHYEMPI VERSIO) ---
                         if ai_kaytossa:
-                            with st.spinner("🤖 Tekoälyn Rauhavahti analysoi hermojen kestävyyttä..."):
+                            with st.spinner("🤖 Rauhavahti analysoi vaunutilannetta..."):
                                 try:
-                                    prompt = f"Olet sarkastinen ja hauska matkaoppaan assistentti (Rauhavahti). Anna lyhyt, humoristinen ja oivaltava vaunusuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}, varoita mahdollisista häiriötekijöistä (kuten itkevät lapset, kovaääniset puhelupuhujat tai kahvilavaunun ruuhkat) ja heitä loppuun joku hauska juna-aiheinen kuitti. Kirjoita vastauksesi kokonaan loppuun asti äläkä katkaise sitä kesken lauseen."
-                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=250)
-                                    st.info(f"🤖 **Tekoälyn Rauhavahti-analyysi:**\n\n{completion.choices[0].message.content}")
+                                    prompt = f"Olet sarkastinen matkaoppaan assistentti. Anna hyvin lyhyt, 1-2 virkkeen pituinen vaunusuositus ja varoitus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi}-{valittu_paikka_nimi}. Pidä vastaus napakkana."
+                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=80)
+                                    st.info(f"🤖 **Rauhavahti:**\n\n{completion.choices[0].message.content}")
                                 except:
                                     pass
                         
                         # --- TIETOKANTAAN TALLENTUVAT MATKUSTAJIEN RAUHARAPORTIT ---
                         st.markdown("#### 🗣️ Matkustajien live-rauharaportit (Tietokanta)")
                         
-                        uusi_raportti = st.text_input(f"Ilmoita tunnelma tai vaunutieto tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 on superhiljainen, vaunu 5 täynnä porukkaa")
+                        uusi_raportti = st.text_input(f"Ilmoita tunnelma tälle junalle ({t_num}):", key=f"inp_{t_num}", placeholder="Esim. Vaunu 3 superhiljainen")
                         if st.button("Lähetä raportti tietokantaan", key=f"btn_{t_num}"):
                             if uusi_raportti:
                                 tallenna_raportti(t_num, uusi_raportti)
-                                st.success("Kiitos! Raportti tallennettiin tietokantaan pysyvästi.")
+                                st.success("Kiitos! Raportti tallennettiin.")
                                 st.rerun()
                         
                         tallennetut_raportit = hae_raportit(t_num)
@@ -335,7 +327,7 @@ if hakunappi:
                             for r_teksti, r_aika in tallennetut_raportit:
                                 st.write(f"💬 *\"{r_teksti}\"* — <small style='color: gray;'>({r_aika})</small>", unsafe_allow_html=True)
                         else:
-                            st.caption("Ei vielä raportteja tässä tietokannassa. Kirjoita ensimmäinen!")
+                            st.caption("Ei vielä raportteja tässä tietokannassa.")
                         
                         st.divider()
                         
@@ -379,21 +371,20 @@ if hakunappi:
                             with v_cols[idx]:
                                 st.metric(label=f"Vaunu {v_nro}", value=v_nimi)
                         
-                        # Vaunun sisäinen rauha-aluekartta
                         st.markdown("---")
                         st.markdown("#### 💺 Vaunun sisäinen rauha-kartta")
                         
                         v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
                         with v_col1:
-                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas ja tuoksuva*")
+                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas*")
                         with v_col2:
                             st.warning("🟠 **Päätypaikat**\n\n*Melko vilkas*")
                         with v_col3:
-                            st.success("🟢 **Keskiosa**\n\n*Erittäin rauhallinen*\n⭐ **Paras**")
+                            st.success("🟢 **Keskiosa**\n\n*Hiljainen*\n⭐ **Paras**")
                         with v_col4:
                             st.warning("🟠 **Päätypaikat**\n\n*Melko vilkas*")
                         with v_col5:
-                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas ja tuoksuva*")
+                            st.error("🔴 **Vessa / Ovi**\n\n*Vilkas*")
 
     else:
         st.error("Virhe haettaessa junatietoja.")
