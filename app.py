@@ -2,16 +2,18 @@ import streamlit as st
 import requests
 from datetime import datetime
 from openai import OpenAI
+import folium
+from streamlit_folium import st_folium
 
 # Sivun perusasetukset
 st.set_page_config(
-    page_title="Raiderauha – Älykäs tekoälytutka", 
+    page_title="Raiderauha – Älykäs vaunukartta", 
     page_icon="🚆", 
     layout="wide"
 )
 
 st.title("🚆 Raiderauha")
-st.markdown("##### *Tekoälyllä tehostettu junatutka ja vaunukartta*")
+st.markdown("##### *Älykäs junatutka, tekoäly ja vaunujen sisäiset rauha-alueet*")
 st.divider()
 
 # Alustetaan OpenAI turvallisesti Streamlitin secrets-asetuksesta
@@ -21,7 +23,7 @@ try:
 except:
     ai_kaytossa = False
 
-# Haetaan asemat Digitrafficin rajapinnasta
+# Haetaan asemat koordinaatteineen Digitrafficin rajapinnasta
 @st.cache_data
 def hae_asemat():
     url = "https://rata.digitraffic.fi/api/v1/metadata/stations"
@@ -30,30 +32,60 @@ def hae_asemat():
         if vastaus.status_code == 200:
             asemat = vastaus.json()
             matkustajasektori = [a for a in asemat if a.get('passengerTraffic') == True]
-            asema_lista = {f"{a['stationName']} ({a['stationShortCode']})": a['stationShortCode'] for a in matkustajasektori}
+            asema_lista = {}
+            for a in matkustajasektori:
+                nimi = f"{a['stationName']} ({a['stationShortCode']})"
+                asema_lista[nimi] = {
+                    "koodi": a['stationShortCode'],
+                    "lat": a.get('latitude'),
+                    "lon": a.get('longitude')
+                }
             return asema_lista
     except:
         pass
-    return {"Helsinki (HKI)": "HKI", "Tampere (TPE)": "TPE", "Turku (TKU)": "TKU", "Oulu (OULU)": "OULU"}
+    return {
+        "Helsinki (HKI)": {"koodi": "HKI", "lat": 60.1719, "lon": 24.9414},
+        "Tampere (TPE)": {"koodi": "TPE", "lat": 61.5033, "lon": 23.7753},
+        "Oulu (OULU)": {"koodi": "OULU", "lat": 65.0124, "lon": 25.4682}
+    }
 
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
 # Sivupalkin hakuehdot
 st.sidebar.header("🎛️ Matkan tiedot")
-oletus_lahto_idx = asema_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
-oletus_paikka_idx = asema_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
+oletus_lahto_idx = asemat_nimet.index("Helsinki (HKI)") if "Helsinki (HKI)" in asema_nimet else 0
+oletus_paikka_idx = asemat_nimet.index("Tampere (TPE)") if "Tampere (TPE)" in asema_nimet else 1
 
 valittu_lahto_nimi = st.sidebar.selectbox("Lähtöasema", asema_nimet, index=oletus_lahto_idx)
 valittu_paikka_nimi = st.sidebar.selectbox("Määränpää", asema_nimet, index=oletus_paikka_idx)
 
-lahto = asema_dict[valittu_lahto_nimi]
-paikka = asema_dict[valittu_paikka_nimi]
+lahto_info = asema_dict[valittu_lahto_nimi]
+paikka_info = asema_dict[valittu_paikka_nimi]
 
-if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
+lahto = lahto_info["koodi"]
+paikka = paikka_info["koodi"]
+
+if st.sidebar.button("🔍 Etsi junat ja rauha-alueet", type="primary"):
+    
+    # 1. Kartta
+    st.markdown("### 🗺️ Reittikartta")
+    if lahto_info["lat"] and paikka_info["lat"]:
+        keski_lat = (lahto_info["lat"] + paikka_info["lat"]) / 2
+        keski_lon = (lahto_info["lon"] + paikka_info["lon"]) / 2
+        
+        m = folium.Map(location=[keski_lat, keski_lon], zoom_start=7, tiles="CartoDB positron")
+        folium.Marker([lahto_info["lat"], lahto_info["lon"]], popup=valittu_lahto_nimi, icon=folium.Icon(color="green", icon="play")).add_to(m)
+        folium.Marker([paikka_info["lat"], paikka_info["lon"]], popup=valittu_paikka_nimi, icon=folium.Icon(color="red", icon="stop")).add_to(m)
+        folium.PolyLine(locations=[[lahto_info["lat"], lahto_info["lon"]], [paikka_info["lat"], paikka_info["lon"]]], color="#1f77b4", weight=4, opacity=0.8).add_to(m)
+        st_folium(m, width="100%", height=350)
+    
+    st.divider()
+    
+    # 2. Junat
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}"
     
-    with st.spinner("Haetaan junia ja pyydetään tekoälyä analysoimaan reittiä..."):
+    with st.spinner("Haetaan junavuoroja..."):
         vastaus = requests.get(url)
     
     if vastaus.status_code == 200:
@@ -64,9 +96,7 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
         else:
             aktiiviset_junat = []
             for juna in junat:
-                if not isinstance(juna, dict):
-                    continue
-                if juna.get('cancelled', False):
+                if not isinstance(juna, dict) or juna.get('cancelled', False):
                     continue
                 
                 train_num = juna.get('trainNumber')
@@ -87,12 +117,7 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
                             saapumis_aika = datetime.fromisoformat(aika_str.replace('Z', '+00:00')).strftime('%H:%M')
                 
                 if lahto_aika and saapumis_aika:
-                    aktiiviset_junat.append({
-                        "numero": train_num,
-                        "tyyppi": train_type,
-                        "lahto": lahto_aika,
-                        "saapuminen": saapumis_aika
-                    })
+                    aktiiviset_junat.append({"numero": train_num, "tyyppi": train_type, "lahto": lahto_aika, "saapuminen": saapumis_aika})
             
             if not aktiiviset_junat:
                 st.warning("Ei löytynyt suoria junia valitsemallesi välille.")
@@ -105,25 +130,18 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
                     
                     with st.expander(f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} ➔ Perillä klo {juna['saapuminen']}"):
                         
-                        # Tekoälyn analyysi tästä junasta
                         if ai_kaytossa:
-                            with st.spinner("🤖 Tekoäly analysoi junan rauhaisuutta..."):
+                            with st.spinner("🤖 Tekoäly analysoi junaa..."):
                                 try:
-                                    prompt = f"Olet VR:n matkaoppaan assistentti. Anna lyhyt, oivaltava ja ystävällinen rauhallisuussuositus junalle {t_tyyppi} {t_num}, joka lähtee klo {juna['lahto']} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}. Kerro, mihin vaunuun kannattaa mennä ja mitä välttää."
-                                    completion = client.chat.completions.create(
-                                        model="gpt-4o-mini",
-                                        messages=[{"role": "user", "content": prompt}],
-                                        max_tokens=150
-                                    )
-                                    ai_analyysi = completion.choices[0].message.content
-                                    st.info(f"🤖 **Tekoälyn rauharaportti:**\n\n{ai_analyysi}")
+                                    prompt = f"Olet VR:n matkaoppaan assistentti. Anna lyhyt ja oivaltava rauhallisuussuositus junalle {t_tyyppi} {t_num} reitillä {valittu_lahto_nimi} - {valittu_paikka_nimi}."
+                                    completion = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}], max_tokens=150)
+                                    st.info(f"🤖 **Tekoälyn rauharaportti:**\n\n{completion.choices[0].message.content}")
                                 except:
-                                    st.info("💡 *Tekoälyanalyysi ei tavoittanut palvelua tällä hetkellä.*")
+                                    pass
                         
                         st.markdown("#### 🗺️ Junan vaunukartta")
                         st.write("Junan kokoonpano veturista alkaen (⬅️ Veturi | Takaosa ➡️):")
                         
-                        # Haetaan vaunut
                         vaunut = []
                         komp_url = f"https://rata.digitraffic.fi/api/v1/compositions/{t_num}"
                         try:
@@ -150,7 +168,7 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
                             else:
                                 vaunut = [
                                     {"wagonType": "Ravintola", "salesNumber": "1"},
-                                    {"wagonType": "Vaunu", "salesNumber": "2"},
+                                    {"wagonType": "Vaunun", "salesNumber": "2"},
                                     {"wagonType": "Vaunu", "salesNumber": "3"}
                                 ]
                         
@@ -160,8 +178,27 @@ if st.sidebar.button("🔍 Etsi junat ja kysy tekoälyltä", type="primary"):
                             v_nro = v.get('salesNumber', str(idx+1))
                             with cols[idx]:
                                 st.metric(label=f"Vaunu {v_nro}", value=v_nimi)
+                        
+                        # --- UUSI: YKSITTÄISEN VAUNUN SISÄINEN RAUHA-ALUEKARTTA ---
+                        st.markdown("---")
+                        st.markdown("#### 💺 Vaunun sisäinen rauha-kartta (Mistä löydät hiljaisuuden?)")
+                        st.write("Tältä näyttää tyypillisen vaunun sisäinen dynamiikka päädystä päätyyn:")
+                        
+                        # Piirretään graafinen vaunun sisäosa sarakkeilla
+                        v_col1, v_col2, v_col3, v_col4, v_col5 = st.columns(5)
+                        
+                        with v_col1:
+                            st.error("🔴 **Väliovi / Vessa**\n\n*Vilkas*\n(Paljon kulkua ja oven aukaisua)")
+                        with v_col2:
+                            st.warning("🟠 **Vaunun päätypaikat**\n\n*Melko vilkas*\n(Lähellä eteistä)")
+                        with v_col3:
+                            st.success("🟢 **Vaunun keskiosa**\n\n*Erittäin rauhallinen*\n⭐ **Paras paikka**")
+                        with v_col4:
+                            st.warning("🟠 **Vaunun päätypaikat**\n\n*Melko vilkas*\n(Lähellä eteistä)")
+                        with v_col5:
+                            st.error("🔴 **Väliovi / Vessa**\n\n*Vilkas*\n(Paljon kulkua ja oven aukaisua)")
 
     else:
         st.error("Virhe haettaessa junatietoja.")
 else:
-    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja kysy tekoälyltä**.")
+    st.info("👈 Valitse asemat sivupalkista ja klikkaa **Etsi junat ja rauha-alueet**.")
