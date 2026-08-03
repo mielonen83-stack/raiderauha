@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 from math import atan2, cos, radians, sin, sqrt
 from zoneinfo import ZoneInfo
+import csv
 from openai import OpenAI
 import pandas as pd
 import requests
@@ -355,6 +356,51 @@ hakunappi = st.sidebar.button("🔍 Raidetutka", type="primary")
 
 if hakunappi:
     st.session_state.haku_tehty = True
+
+# --- PALAUTELOMAKE SIVUPALKISSA ---
+st.sidebar.divider()
+st.sidebar.markdown("### 💬 Anna palautetta Raidetutkasta")
+
+with st.sidebar.form("palaute_lomake"):
+    kayttajan_nimi = st.text_input("Nimi (valinnainen)")
+    palaute_tyyppi = st.selectbox(
+        "Palautteen tyyppi",
+        [
+            "Ideat / Parannusehdotukset",
+            "Bugiraportti / Virhe",
+            "Yleistä palautetta",
+        ],
+    )
+    palaute_teksti = st.text_area(
+        "Kirjoita palautteesi tähän...",
+        placeholder="Kerro risut, ruusut tai kehitysideat...",
+    )
+
+    laheta_palaute = st.form_submit_button(
+        "Lähetä palaute 🚀", use_container_width=True
+    )
+
+    if laheta_palaute:
+        if palaute_teksti.strip():
+            aikaleima = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            rivi = [
+                aikaleima,
+                kayttajan_nimi if kayttajan_nimi else "Anonyymi",
+                palaute_tyyppi,
+                palaute_teksti,
+            ]
+            try:
+                with open("palautteet.csv", mode="a", encoding="utf-8") as f:
+                    kirjoittaja = csv.writer(f)
+                    kirjoittaja.writerow(rivi)
+                st.success(
+                    "Kiitos palautteestasi! Se tallennettiin onnistuneesti."
+                    " 🚆✨"
+                )
+            except Exception as e:
+                st.error(f"Palautteen tallennuksessa tapahtui virhe: {e}")
+        else:
+            st.warning("Kirjoita ensin palauteteksti ennen lähettämistä.")
 
 st.sidebar.divider()
 st.sidebar.caption(
