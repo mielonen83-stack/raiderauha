@@ -205,41 +205,48 @@ if not st.session_state.evasteet_hyvaksytty:
         st.session_state.evasteet_hyvaksytty = True
         st.rerun()
 
-# --- SKANDINAAVINEN & MOBIILIOPTIMOITU UI-TYYLITTELY ---
+# --- MODERNI SCANDINAVIAN UI -TYYLITTELY (GRAFIIKAT & KORTIT) ---
 st.markdown(
     """
     <style>
     .stApp {
-        background-color: #f8f9fa;
-        color: #212529;
+        background-color: #f4f6f8;
+        color: #1e293b;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     .wagon-card {
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        padding: 12px;
-        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 14px;
+        border-radius: 12px;
         text-align: center;
-        margin-bottom: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        transition: transform 0.2s ease;
     }
-    h1 {
-        font-size: 1.8rem !important;
-        color: #1a1a1a !important;
+    .wagon-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
     }
-    h2 {
-        font-size: 1.4rem !important;
-        color: #1a1a1a !important;
+    .train-box {
+        background: #ffffff;
+        border-left: 5px solid #0ea5e9;
+        padding: 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    h3 {
-        font-size: 1.15rem !important;
-        color: #1a1a1a !important;
+    h1, h2, h3 {
+        color: #0f172a !important;
+        font-weight: 700 !important;
     }
     [data-testid="stSidebar"] {
-        background-color: #f1f3f5;
-        border-right: 1px solid #e9ecef;
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
     }
     .stButton button, .stLinkButton a {
-        width: 100% !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
     }
     </style>
     """,
@@ -709,14 +716,14 @@ if valittu_nro:
                             palvelut_html = (
                                 "<br>".join(tiedot)
                                 if tiedot
-                                else ('<span style="color: #adb5bd;">Standard wagon</span>' if valittu_kieli == "English" else '<span style="color: #adb5bd;">Perusvaunu</span>')
+                                else ('<span style="color: #94a3b8;">Standard wagon</span>' if valittu_kieli == "English" else '<span style="color: #94a3b8;">Perusvaunu</span>')
                             )
 
                             st.markdown(
                                 f"""
                                         <div class="wagon-card">
-                                            <div style="font-weight: bold; font-size: 0.95rem; margin-bottom: 3px;">{ikoni} {kuvaus}</div>
-                                            <div style="font-size: 0.8rem; color: #495057;">{palvelut_html}</div>
+                                            <div style="font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: #0f172a;">{ikoni} {kuvaus}</div>
+                                            <div style="font-size: 0.85rem; color: #475569; line-height: 1.4;">{palvelut_html}</div>
                                         </div>
                                         """,
                                 unsafe_allow_html=True,
@@ -1116,7 +1123,16 @@ if st.session_state.haku_tehty:
                     lahto_perille_txt = f"Lähtö: {j['lahto']} ➔ Perille: {j['perille']}"
 
                 st.markdown(
-                    f"🚆 **{j['tyyppi']} {j['numero']}**\n\n{lahto_perille_txt}\n{matka_info}\nStatus: {tila_teksti}\n*{historia_teksti}*"
+                    f"""
+                    <div class="train-box">
+                        <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px;">🚆 {j['tyyppi']} {j['numero']}</div>
+                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 4px;">{lahto_perille_txt}</div>
+                        <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 4px;">{matka_info}</div>
+                        <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 4px;">Status: {tila_teksti}</div>
+                        <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">{historia_teksti}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
                 col_nappi1, col_nappi2 = st.columns(2)
