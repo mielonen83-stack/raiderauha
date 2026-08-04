@@ -163,18 +163,6 @@ def hae_ratatyot_ja_nopeusrajoitukset():
     return []
 
 
-@st.cache_data(ttl=300)
-def hae_aseman_tiedotteet(asema_koodi):
-    url = "https://rata.digitraffic.fi/api/v1/messages"
-    try:
-        vastaus = requests.get(url, timeout=5)
-        if vastaus.status_code == 200:
-            return vastaus.json()[:5]
-    except Exception:
-        pass
-    return []
-
-
 @st.cache_data(ttl=60)
 def hae_aseman_junat(asema_koodi):
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{asema_koodi}"
@@ -187,26 +175,13 @@ def hae_aseman_junat(asema_koodi):
     return []
 
 
-@st.cache_data(ttl=600)
-def hae_radan_saatiedot():
-    url = "https://tie.digitraffic.fi/api/v1/data/weather-data"
-    try:
-        vastaus = requests.get(url, timeout=3)
-        if vastaus.status_code == 200:
-            return vastaus.json().get("weatherStations", [])[:5]
-    except Exception:
-        pass
-    return []
-
-
 @st.cache_data(ttl=300)
 def hae_vaunukoostumus(juna_numero, pvm):
     url = f"https://rata.digitraffic.fi/api/v1/compositions/{pvm}/{juna_numero}"
     try:
         vastaus = requests.get(url, timeout=3)
         if vastaus.status_code == 200:
-            data = vastaus.json()
-            return data
+            return vastaus.json()
     except Exception:
         pass
     return None
@@ -989,4 +964,24 @@ if st.session_state.haku_tehty:
                 st.markdown(
                     f"🚆 **{j['tyyppi']} {j['numero']}**\n\nLähtö: {j['lahto']} ➔"
                     f" Perille: {j['perille']}\n{matka_info}\nTila: {tila_teksti}\n*{historia_teksti}*"
+                )
+
+                col_nappi1, col_nappi2 = st.columns(2)
+                with col_nappi1:
+                    vr_haku_url = f"https://www.vr.fi/matkailu?from={valittu_lahto_nimi.split(' ')[0]}&to={valittu_paikka_nimi.split(' ')[0]}&date={valittu_pvm.strftime('%Y-%m-%d')}"
+                    st.link_button(
+                        "🛒 Osta liput VR:ltä",
+                        vr_haku_url,
+                        use_container_width=True,
+                    )
+                with col_nappi2:
+                    if st.button(
+                        f"📡 Seuraa live / tiedot ({j['numero']})",
+                        key=f"reitti_live_{j['numero']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state.valittu_live_juna = str(j["numero"])
+                        st.rerun()
+
+                st.divider()
                 )
