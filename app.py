@@ -178,49 +178,250 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- SKANDINAAVINEN & MOBIILIOPTIMOITU UI-TYYLITTELY ---
+# --- RAIDETUTKA DESIGN SYSTEM: "LAITURINÄYTTÖ" (SPLIT-FLAP) -TEEMA ---
 st.markdown(
     """
     <style>
-    .stApp {
-        background-color: #f8f9fa;
-        color: #212529;
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+    :root {
+        --rt-bg: #F1F3F1;
+        --rt-surface: #FFFFFF;
+        --rt-surface-alt: #E8EDEA;
+        --rt-ink: #101A18;
+        --rt-ink-muted: #57655F;
+        --rt-rail-deep: #0D2E2A;
+        --rt-rail-deep-2: #123B34;
+        --rt-amber: #E8A33D;
+        --rt-signal: #1F7A5C;
+        --rt-alert: #C1443C;
+        --rt-border: #DDE3DF;
+        --rt-radius: 10px;
+        --rt-font-display: 'Big Shoulders Display', sans-serif;
+        --rt-font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --rt-font-mono: 'IBM Plex Mono', 'SFMono-Regular', monospace;
     }
+
+    html, body, .stApp {
+        background-color: var(--rt-bg) !important;
+        color: var(--rt-ink) !important;
+        font-family: var(--rt-font-body) !important;
+    }
+
+    .stApp * {
+        font-family: var(--rt-font-body);
+    }
+
+    h1, h2, h3, h4 {
+        font-family: var(--rt-font-display) !important;
+        color: var(--rt-rail-deep) !important;
+        letter-spacing: 0.01em;
+        font-weight: 700 !important;
+    }
+    h1 {
+        font-size: clamp(1.65rem, 5vw, 2.4rem) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+    h2 { font-size: clamp(1.25rem, 3.6vw, 1.55rem) !important; }
+    h3, h4 { font-size: clamp(1.05rem, 3vw, 1.2rem) !important; }
+
+    h1::after {
+        content: "";
+        display: block;
+        width: 64px;
+        height: 3px;
+        background: var(--rt-amber);
+        margin-top: 6px;
+        border-radius: 2px;
+    }
+
     .metric-card {
-        background-color: #ffffff;
-        border: 1px solid #e9ecef;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        background-color: var(--rt-surface);
+        border: 1px solid var(--rt-border);
+        border-left: 3px solid var(--rt-rail-deep);
+        padding: 16px 18px;
+        border-radius: var(--rt-radius);
+        box-shadow: 0 1px 2px rgba(13, 46, 42, 0.05);
         margin-bottom: 12px;
     }
     .wagon-card {
-        background-color: #ffffff;
-        border: 1px solid #dee2e6;
-        padding: 12px;
-        border-radius: 8px;
+        background-color: var(--rt-surface);
+        border: 1px solid var(--rt-border);
+        padding: 14px 10px;
+        border-radius: var(--rt-radius);
         text-align: center;
         margin-bottom: 8px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        box-shadow: 0 1px 2px rgba(13, 46, 42, 0.04);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
     }
-    h1 {
-        font-size: 1.8rem !important;
-        color: #1a1a1a !important;
+    .wagon-card:hover {
+        border-color: var(--rt-rail-deep);
+        box-shadow: 0 3px 10px rgba(13, 46, 42, 0.08);
     }
-    h2 {
-        font-size: 1.4rem !important;
-        color: #1a1a1a !important;
-    }
-    h3 {
-        font-size: 1.15rem !important;
-        color: #1a1a1a !important;
-    }
+
     [data-testid="stSidebar"] {
-        background-color: #f1f3f5;
-        border-right: 1px solid #e9ecef;
+        background-color: var(--rt-rail-deep) !important;
+        border-right: none;
     }
-    .stButton button, .stLinkButton a {
+    [data-testid="stSidebar"] * {
+        color: #EAF2EF !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(234, 242, 239, 0.15) !important;
+        margin: 0.8rem 0 !important;
+    }
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] textarea,
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: var(--rt-rail-deep-2) !important;
+        border: 1px solid rgba(234, 242, 239, 0.25) !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+        color: #EAF2EF !important;
+    }
+
+    .stButton button, .stLinkButton a, .stFormSubmitButton button {
         width: 100% !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.01em;
+        border: 1px solid var(--rt-border) !important;
+        transition: transform 0.08s ease, box-shadow 0.15s ease;
+        min-height: 44px;
+    }
+    .stButton button:active, .stLinkButton a:active {
+        transform: scale(0.98);
+    }
+    [data-testid="stSidebar"] .stButton button,
+    [data-testid="stSidebar"] .stLinkButton a {
+        background-color: var(--rt-rail-deep-2) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(234, 242, 239, 0.25) !important;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        border-color: var(--rt-amber) !important;
+        color: var(--rt-amber) !important;
+    }
+    button[kind="primary"], .stButton button[kind="primary"] {
+        background-color: var(--rt-amber) !important;
+        color: var(--rt-rail-deep) !important;
+        border: 1px solid var(--rt-amber) !important;
+        font-weight: 700 !important;
+    }
+    button[kind="primary"]:hover {
+        filter: brightness(1.06);
+    }
+
+    [data-testid="stTabs"] button[data-baseweb="tab"] {
+        font-family: var(--rt-font-display);
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--rt-ink-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: var(--rt-rail-deep) !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+        background-color: var(--rt-amber) !important;
+        height: 3px !important;
+    }
+    [data-baseweb="tab-border"] { background-color: var(--rt-border) !important; }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--rt-border);
+        border-radius: var(--rt-radius);
+        overflow: hidden;
+    }
+    [data-testid="stDataFrame"] * {
+        font-family: var(--rt-font-mono) !important;
+        font-size: 0.86rem !important;
+    }
+    [data-testid="stDataFrameResizable"] div[role="columnheader"] {
+        background-color: var(--rt-surface-alt) !important;
+        font-family: var(--rt-font-body) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.04em;
+        color: var(--rt-ink-muted) !important;
+    }
+
+    [data-testid="stAlert"] {
+        border-radius: var(--rt-radius) !important;
+        border: 1px solid transparent;
+        font-size: 0.92rem;
+    }
+    [data-testid="stAlertContentSuccess"] { color: var(--rt-signal) !important; }
+    [data-testid="stAlertContentError"] { color: var(--rt-alert) !important; }
+
+    .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div,
+    .stDateInput input {
+        border-radius: 8px !important;
+        border: 1px solid var(--rt-border) !important;
+    }
+
+    .stApp p, .stApp li, .stApp span, .stApp label {
+        color: var(--rt-ink);
+    }
+
+    .rt-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--rt-font-mono);
+        font-weight: 600;
+        font-size: 0.82rem;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--rt-border);
+        background: var(--rt-surface-alt);
+    }
+    .rt-chip.ok { color: var(--rt-signal); border-color: rgba(31,122,92,0.35); }
+    .rt-chip.warn { color: var(--rt-amber); border-color: rgba(232,163,61,0.4); }
+    .rt-chip.alert { color: var(--rt-alert); border-color: rgba(193,68,60,0.35); }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--rt-rail-deep-2); border-radius: 8px; }
+
+    @media (max-width: 640px) {
+        .block-container {
+            padding-left: 0.9rem !important;
+            padding-right: 0.9rem !important;
+            padding-top: 1.2rem !important;
+        }
+        h1::after { width: 44px; }
+        .metric-card, .wagon-card {
+            padding: 12px !important;
+        }
+        [data-testid="stDataFrame"] * {
+            font-size: 0.78rem !important;
+        }
+        .stButton button, .stLinkButton a, .stFormSubmitButton button {
+            font-size: 0.92rem !important;
+            padding: 0.6rem 0.8rem !important;
+        }
+        [data-testid="stTabs"] button[data-baseweb="tab"] {
+            font-size: 0.88rem;
+            padding: 8px 10px;
+        }
+        [data-testid="column"] {
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
     }
     </style>
     """,
