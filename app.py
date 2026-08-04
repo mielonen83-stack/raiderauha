@@ -454,9 +454,7 @@ with laituri_tab1:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = str(r.get("commercialTrack", "-"))[
-                        :3
-                    ]  # Siistitty raide
+                    track = str(r.get("commercialTrack", "-"))[:3]
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -514,9 +512,7 @@ with laituri_tab2:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = str(r.get("commercialTrack", "-"))[
-                        :3
-                    ]  # Siistitty raide
+                    track = str(r.get("commercialTrack", "-"))[:3]
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -782,7 +778,7 @@ if st.session_state.haku_tehty:
                                     "wifi": True,
                                     "pet": False,
                                     "accessible": True,
-                                    "bicycle": True,
+                                    "bicycle": False,  # Korjattu: Ei pyörää Ekstraan
                                 },
                                 {
                                     "wagonType": "Ravintola",
@@ -790,7 +786,9 @@ if st.session_state.haku_tehty:
                                     "wifi": True,
                                     "pet": False,
                                     "accessible": True,
-                                    "bicycle": False,
+                                    "bicycle": (
+                                        False  # Korjattu: Ei pyörää ravintolaan
+                                    ),
                                 },
                                 {
                                     "wagonType": "InterCity",
@@ -957,14 +955,32 @@ if st.session_state.haku_tehty:
                             st.markdown("#### 🚃 Vaunukoostumus & Palvelut")
                             v_list = []
                             for v in vaunut:
+                                v_tyyppi_nimi = v.get("wagonType", "-")
+
+                                # Älykäs tarkistus: Jos kyseessä on ravintolavauna tai Ekstra-luokka, poistetaan pyöräpaikka/lemmikit logiikasta
+                                onko_ravintola = (
+                                    "ravintola" in v_tyyppi_nimi.lower()
+                                )
+                                onko_ekstra = "ekstra" in v_tyyppi_nimi.lower()
+
+                                pyora_arvo = v.get("bicycle", False)
+                                lemmikki_arvo = v.get("pet", False)
+
+                                if onko_ravintola or onko_ekstra:
+                                    pyora_arvo = False
+                                if onko_ravintola:
+                                    lemmikki_arvo = False
+
                                 v_list.append({
                                     "Vaunu": v.get("salesNumber", "-"),
-                                    "Tyyppi": v.get("wagonType", "-"),
+                                    "Tyyppi": v_tyyppi_nimi,
                                     "Wi-Fi": (
                                         "📶 Kyllä" if v.get("wifi") else "Ei"
                                     ),
                                     "Lemmikit": (
-                                        "🐾 Sallittu" if v.get("pet") else "Ei"
+                                        "🐾 Sallittu"
+                                        if lemmikki_arvo
+                                        else "Ei"
                                     ),
                                     "Esteetön": (
                                         "♿ Kyllä"
@@ -972,7 +988,7 @@ if st.session_state.haku_tehty:
                                         else "Ei"
                                     ),
                                     "Pyöräpaikka": (
-                                        "🚲 Kyllä" if v.get("bicycle") else "Ei"
+                                        "🚲 Kyllä" if pyora_arvo else "Ei"
                                     ),
                                 })
                             st.dataframe(
