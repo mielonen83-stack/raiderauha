@@ -161,7 +161,7 @@ TEKSTIT = {
         "aikataulussa": "On time ✅",
         "historia_info": "📊 Past days average delay +{min} min",
         "historia_ei_tietoa": "📊 No historical data available",
-        "matka_kesto": "⏱️ Travel time: ~{kesto} min | Avg speed estimate: ~{nopeus} km/h",
+        "matka_kesto": "⏱️ Travel time: ~{kesto} min | Avg speed estimate: ~{keskinopeus} km/h",
         "osta_liput": "🛒 Buy tickets from VR",
         "seuraa_live": "📡 Live tracking / info ({nro})",
     },
@@ -676,30 +676,33 @@ if st.session_state.valittu_live_juna:
                         col_idx = idx % len(cols)
                         with cols[col_idx]:
                             v_tyyppi = v.get("wagonType", "Wagon")
-                            v_nro = v.get("salesNumber", "-")
+                            v_nro = v.get("salesNumber")
 
                             ikoni = "🚃"
-                            kuvaus = f"Wagon {v_nro}" if valittu_kieli == "English" else f"Vaunu {v_nro}"
+                            if v_nro:
+                                kuvaus = f"Wagon {v_nro}" if valittu_kieli == "English" else f"Vaunu {v_nro}"
+                            else:
+                                kuvaus = "Wagon" if valittu_kieli == "English" else "Vaunu"
 
                             if v_tyyppi == "Ed":
-                                kuvaus = f"Wagon {v_nro} (2nd class)" if valittu_kieli == "English" else f"Vaunu {v_nro} (2. luokka)"
+                                kuvaus = f"Wagon {v_nro} (2nd class)" if (valittu_kieli == "English" and v_nro) else ("2nd class wagon" if valittu_kieli == "English" else f"Vaunu {v_nro} (2. luokka)" if v_nro else "2. luokan vaunu")
                             elif v_tyyppi == "Edfs":
                                 ikoni = "🧸"
-                                kuvaus = f"Wagon {v_nro} (Family area)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Perheosasto)"
+                                kuvaus = f"Wagon {v_nro} (Family area)" if (valittu_kieli == "English" and v_nro) else ("Family area" if valittu_kieli == "English" else f"Vaunu {v_nro} (Perheosasto)" if v_nro else "Perheosasto")
                             elif v_tyyppi == "Edo":
                                 ikoni = "☕"
-                                kuvaus = f"Wagon {v_nro} (Bistro)"
-                            elif v_tyyppi == "ERd" or v_tyyppi == "Rx":
+                                kuvaus = f"Wagon {v_nro} (Bistro)" if v_nro else "Bistro"
+                            elif v_tyyppi in ["ERd", "Rx"]:
                                 ikoni = "🍽️"
-                                kuvaus = f"Wagon {v_nro} (Restaurant)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Ravintola)"
+                                kuvaus = f"Wagon {v_nro} (Restaurant)" if (valittu_kieli == "English" and v_nro) else ("Restaurant car" if valittu_kieli == "English" else f"Vaunu {v_nro} (Ravintola)" if v_nro else "Ravintolavaunu")
                             elif v_tyyppi == "Eds":
                                 ikoni = "🛋️"
-                                kuvaus = f"Wagon {v_nro} (InterCity)"
-                            elif v_tyyppi == "CEd" or v_tyyppi == "C":
+                                kuvaus = f"Wagon {v_nro} (InterCity)" if v_nro else "InterCity"
+                            elif v_tyyppi in ["CEd", "C"]:
                                 ikoni = "🛏️"
-                                kuvaus = f"Wagon {v_nro} (Sleeping)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Makuu)"
+                                kuvaus = f"Wagon {v_nro} (Sleeping)" if (valittu_kieli == "English" and v_nro) else ("Sleeping car" if valittu_kieli == "English" else f"Vaunu {v_nro} (Makuu)" if v_nro else "Makuuvaunu")
                             else:
-                                kuvaus = f"Wagon {v_nro} ({v_tyyppi})" if valittu_kieli == "English" else f"Vaunu {v_nro} ({v_tyyppi})"
+                                kuvaus = f"Wagon {v_nro} ({v_tyyppi})" if v_nro else f"Vaunu ({v_tyyppi})"
 
                             tiedot = []
                             if v_tyyppi not in ["ERd", "Rx", "Edo"]:
