@@ -129,7 +129,7 @@ def hae_aseman_tiedotteet(asema_koodi):
 def hae_aseman_junat(asema_koodi):
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{asema_koodi}"
     try:
-        vastaus = requests.get(url, timeout=3)
+        vastaus = requests.get(url, timeout=5)
         if vastaus.status_code == 200:
             return vastaus.json()
     except Exception:
@@ -500,7 +500,10 @@ with laituri_tab1:
         else:
             st.info("Ei lähteviä junia tällä hetkellä.")
     else:
-        st.info("Asemanäyttödataa ei voitu hakea.")
+        st.info(
+            "Asemanäyttödataa haetaan tai asemalla ei ole aktiivisia junia"
+            " juuri nyt."
+        )
 
 with laituri_tab2:
     if aseman_junat_data:
@@ -650,8 +653,12 @@ if st.session_state.haku_tehty:
             f" arviolta **{saastetty_co2:.1f} kg CO₂** -päästöjä!"
         )
 
-    st.info("📡 Raidetutka hakee aikatauluja ja Digitrafficin tietoja...")
-    st.divider()
+    # LISÄTTY OPASTEKYLTTI KÄYTTÄJILLE:
+    st.info(
+        "💡 **Vinkki:** Klikkaa alta haluamasi junan riviä auki nähdäksesi"
+        " **live-sijainnin kartalla**, tarkan reitin aikataulun ja"
+        " vaunukoostumuksen! 👇"
+    )
 
     url = f"https://rata.digitraffic.fi/api/v1/live-trains/station/{lahto}/{paikka}?departure_date={valittu_pvm.strftime('%Y-%m-%d')}"
 
@@ -866,7 +873,7 @@ if st.session_state.haku_tehty:
                         luotettavuus_taso = "⚠️ Usein myöhässä"
 
                     with st.expander(
-                        f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} (Raide {l_raide}) ➔ Perillä klo {juna['saapuminen']} (Raide {s_raide}) [{status_teksti}]"
+                        f"🚆 {t_tyyppi} {t_num} | Lähtö klo {juna['lahto']} (Raide {l_raide}) ➔ Perillä klo {juna['saapuminen']} (Raide {s_raide}) [{status_teksti}] 🔍 [Klikkaa tästä karttaan ja tietoihin]"
                     ):
 
                         st.info(
