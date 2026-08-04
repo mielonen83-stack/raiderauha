@@ -513,9 +513,7 @@ if st.session_state.valittu_live_juna:
                     for v in vaunut:
                         v_tyyppi = v.get("wagonType", "Vaunu")
                         v_nro = v.get("salesNumber", "-")
-                        v_lower = v_tyyppi.lower()
                         
-                        # Tunnistetaan vaunutyyppi ja ominaisuudet fiksusti
                         kuvaus = f"Vaunu {v_nro}"
                         ominaisuudet = []
                         
@@ -535,21 +533,16 @@ if st.session_state.valittu_live_juna:
                         else:
                             kuvaus += f" ({v_tyyppi})"
 
-                        # API-tarkistukset
                         if v.get("accessibility", False):
                             ominaisuudet.append("♿ Inva-paikat")
                         if v.get("petsAllowed", False):
                             ominaisuudet.append("🐾 Lemmikkipaikat")
-                        if "bicycle" in v or "pyörä" in str(v).lower() or v_tyyppi in ["Edfs", "Ed"]:
-                            # Monissa vaunuissa on pyöräpaikkoja
-                            pass
-
-                        # Muotoillaan siisti rivi
-                         rivi_teksti = f"- **{kuvaus}**"
-                         if ominaisuudet:
-                             rivi_teksti += f" – *{' | '.join(ominaisuudet)}*"
-                         
-                         st.markdown(rivi_teksti)
+                        
+                        rivi_teksti = f"- **{kuvaus}**"
+                        if ominaisuudet:
+                            rivi_teksti += f" – *{' | '.join(ominaisuudet)}*"
+                        
+                        st.markdown(rivi_teksti)
                 else:
                     st.info("Ei tarkempia vaunutietoja saatavilla tälle vuorolle.")
         else:
@@ -564,7 +557,6 @@ if st.session_state.valittu_live_juna:
 
             st.success(f"📍 **Live-sijainti:** Juna etenee nopeudella **{kmh_nopeus} km/h**.")
             
-            # Kartan sulkumahdollisuus
             kartta_ava = f"live_{valittu_nro}"
             if kartta_ava not in st.session_state.piilotetut_kartat:
                 col_k1, col_k2 = st.columns([6, 1])
@@ -931,7 +923,6 @@ if st.session_state.haku_tehty:
                             historia_myohassa = hae_junan_historia_luotettavuus(str(j_nro))
                             st.markdown(f"**Historiallinen myöhästymisarvio:** ~{historia_myohassa} min")
 
-                        # Vaunukoostumus ja fiksut palvelut reittituloksiin
                         pvm_str = valittu_pvm.strftime("%Y-%m-%d")
                         reitti_koostumus = hae_vaunukoostumus(str(j_nro), pvm_str)
                         if reitti_koostumus and "journeySections" in reitti_koostumus:
@@ -977,7 +968,6 @@ if st.session_state.haku_tehty:
                             kmh = round(sijainti["nopeus"] * 3.6)
                             st.success(f"📍 **Live-sijainti löydetty!** Nopeus tällä hetkellä **{kmh} km/h**.")
                             
-                            # Kartan sulkumahdollisuus reittihakuun
                             kartta_ava_haku = f"reitti_{j_nro}"
                             if kartta_ava_haku not in st.session_state.piilotetut_kartat:
                                 col_hk1, col_hk2 = st.columns([6, 1])
