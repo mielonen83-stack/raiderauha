@@ -199,6 +199,23 @@ def hae_junan_sijainti(juna_numero):
     return None
 
 
+@st.cache_data(ttl=30)
+def hae_junan_perustiedot(juna_numero):
+    tanaan_pvm = date.today().strftime("%Y-%m-%d")
+    url = f"https://rata.digitraffic.fi/api/v1/trains/{tanaan_pvm}/{juna_numero}"
+    try:
+        vastaus = requests.get(url, timeout=3)
+        if vastaus.status_code == 200:
+            data = vastaus.json()
+            if isinstance(data, list) and len(data) > 0:
+                return data[0]
+            elif isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return None
+
+
 asema_dict = hae_asemat()
 asema_nimet = list(asema_dict.keys())
 
@@ -273,24 +290,60 @@ st.sidebar.markdown("### ⭐ Seuratut junat")
 seurattava_input = st.sidebar.text_input(
     "Lisää junanumero seurantaan", placeholder="Esim. 67"
 )
-if st.sidebar.button("Lisää juna"):
-    if (
-        seurattava_input
-        and seurattava_input not in st.session_state.seuratut_junat
-    ):
-        st.session_state.seuratut_junat.append(seurattava_input)
-        st.sidebar.success(f"Juna {seurattava_input} lisätty!")
+col_lisaa, col_poista = st.sidebar.columns(2)
+with col_lisaa:
+    if st.button("Lisää juna"):
+        if (
+            seurattava_input
+            and seurattava_input not in st.session_state.seuratut_junat
+        ):
+            st.session_state.seuratut_junat.append(seurattava_input)
+            st.success(f"Juna {seurattava_input} lisätty!")
+with col_poista:
+    if st.button("Tyhjennä lista"):
+        st.session_state.seuratut_junat = []
+        st.rerun()
 
 for j_nro in st.session_state.seuratut_junat:
+    juna_info = hae_junan_perustiedot(j_nro)
     sijainti = hae_junan_sijainti(j_nro)
-    tila_teksti = (
-        f"🟢 Liikkeessä ({round(sijainti['nopeus'] * 3.6)} km/h)"
-        if sijainti
-        else "⏳ Ei live-tietoa"
-    )
-    st.sidebar.write(f"🚆 Juna {j_nro}: {tila_teksti}")
 
-st.sidebar.divider()
+    t_tyyppi = "Juna"
+    lahto_asema = "Lähtö"
+    paate_asema = "Määränpää"
+    myohassa_min = 0
+
+    if juna_info:
+        t_tyyppi = juna_info.get("trainType", "Juna")
+        taulukko = juna_info.get("timeTableRows", [])
+        if taulukko:
+            lahto_koodi = taulukko[0].get("stationShortCode")
+            paate_koodi = taulukko[-1].get("stationShortCode")
+            lahto_asema = koodi_to_nimi.get(lahto_koodi, lahto_koodi)
+            paate_asema = koodi_to_nimi.get(paate_koodi, paate_koodi)
+
+            # Tarkistetaan viimeisin myöhästyminen
+            for rivi in reversed(taulukko):
+                if rivi.get("differenceInMinutes") is not None:
+                    myohassa_min = rivi.get("differenceInMinutes")
+                    break
+
+    st.sidebar.markdown(
+        f"**🚆 {t_tyyppi} {j_nro}**\n📍 *{lahto_asema} ➔ {paate_asema}*"
+    )
+
+    if sijainti:
+        kmh = round(sijainti["nopeus"] * 3.6)
+        st.sidebar.markdown(f"🟢 Liikkeessä: **{kmh} km/h**")
+    else:
+        st.sidebar.markdown("⏳ Ei live-paikannusta")
+
+    if myohassa_min > 0:
+        st.sidebar.error(f"⚠️ Myöhässä: +{myohassa_min} min")
+    else:
+        st.sidebar.success("✅ Ajallaan")
+
+    st.sidebar.divider()
 
 st.sidebar.markdown("### ♿ Palvelusuodattimet")
 vaadi_pyora = st.sidebar.checkbox("🚲 Pyöräpaikka vaaditaan")
