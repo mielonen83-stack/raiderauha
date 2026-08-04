@@ -813,3 +813,68 @@ if st.session_state.haku_tehty:
             aktiiviset_junat = []
             naytetyt_reitti_junat = set()
             nyt = datetime.now(suomi_aika)
+
+            for juna in junat:
+                j_num = juna.get("trainNumber")
+                if j_num in naytetyt_reitti_junat:
+                    continue
+                naytetyt_reitti_junat.add(j_num)
+
+                t_tyyppi = juna.get("trainType")
+                peruttu = juna.get("cancelled", False)
+                timeTable = juna.get("timeTableRows", [])
+
+                lahto_aika_str = ""
+                perille_aika_str = ""
+                myohassa = 0
+
+                for rivi in timeTable:
+                    if rivi.get("stationShortCode") == lahto and rivi.get("type") == "DEPARTURE":
+                        sch = rivi.get("scheduledTime")
+                        diff = rivi.get("differenceInMinutes", 0)
+                        if diff:
+                            myohassa = diff
+                        if sch:
+                            try:
+                                dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(suomi_aika)
+                                lahto_aika_str = dt.strftime("%H:%M")
+                            except Exception:
+                                pass
+                    if rivi.get("stationShortCode") == paikka and rivi.get("type") == "ARRIVAL":
+                        sch = rivi.get("scheduledTime")
+                        if sch:
+                            try:
+                                dt = datetime.fromisoformat(sch.replace("Z", "+00:00")).astimezone(suomi_aika)
+                                perille_aika_str = dt.strftime("%H:%M")
+                            except Exception:
+                                pass
+
+                aktiiviset_junat.append({
+                    "numero": j_num,
+                    "tyyppi": t_tyyppi,
+                    "lahto": lahto_aika_str,
+                    "perille": perille_aika_str,
+                    "myohassa": myohassa,
+                    "peruttu": peruttu
+                })
+
+            if aktiiviset_junat:
+                st.markdown("#### Löytyneet junavuorot:")
+                for j in aktiiviset_junat:
+                    tila_teksti = "Peruttu ❌" if j["peruttu"] else (f"Myöhässä +{j['myohassa']} min ⚠️" if j["myohassa"] > 0 else "Ajallaan 🟢")
+                    
+                    col_j1, col_j2, col_j3 = st.columns([3, 3, 2])
+                    with col_j1:
+                        st.markdown(f"**🚆 {j['tyyppi']} {j['numero']}**")
+                        st.caption(f"Lähtö: {j['lahto']} ➔ Perillä: {j['perille']}")
+                    with col_j2:
+                        st.markdown(f"Tila: **{tila_teksti}**")
+                    with col_j3:
+                        if st.button("Valitse & Seuraa", key=f"valitse_juna_{j['numero']}"):
+                            st.session_state.valittu_live_juna = str(j['numero'])
+                            st.rerun()
+                    st.divider()
+            else:
+                st.info("Ei aktiivisia junavuoroja tälle välille valittuna päivänä.")
+    else:
+        st.warning("Yhteysvirhe haettaessa junia Digitrafficista.")
