@@ -653,7 +653,6 @@ if st.session_state.haku_tehty:
             f" arviolta **{saastetty_co2:.1f} kg CO₂** -päästöjä!"
         )
 
-    # LISÄTTY OPASTEKYLTTI KÄYTTÄJILLE:
     st.info(
         "💡 **Vinkki:** Klikkaa alta haluamasi junan riviä auki nähdäksesi"
         " **live-sijainnin kartalla**, tarkan reitin aikataulun ja"
@@ -752,10 +751,10 @@ if st.session_state.haku_tehty:
                                 tila = f"⏳ Lähtee pian (n. {erotus_min} min päästä)"
                             elif erotus_min < 120:
                                 tila = f"⏳ Lähtee {erotus_min} min päästä"
+                            elif lahto_dt.date() == nyt.date() and lahto_dt.hour >= 18:
+                                tila = f"⏳ Lähtee tänään illalla klo {lahto_aika_str}"
                             else:
-                                tila = (
-                                    f"⏳ Lähtee tänään klo {lahto_aika_str}"
-                                )
+                                tila = f"⏳ Lähtee tänään klo {lahto_aika_str}"
                         else:
                             tila = "🟢 Juuri nyt matkalla"
 
