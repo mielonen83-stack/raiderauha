@@ -441,8 +441,13 @@ aseman_junat_data = hae_aseman_junat(lahto)
 with laituri_tab1:
     if aseman_junat_data:
         l_lahto_rivit = []
+        naytetyt_laituri_lahto = set()
         for aj in aseman_junat_data:
             t_num = aj.get("trainNumber")
+            if t_num in naytetyt_laituri_lahto:
+                continue
+            naytetyt_laituri_lahto.add(t_num)
+
             t_tyyppi = aj.get("trainType")
             cancelled = aj.get("cancelled", False)
             timetable = aj.get("timeTableRows", [])
@@ -500,8 +505,13 @@ with laituri_tab1:
 with laituri_tab2:
     if aseman_junat_data:
         l_saapuu_rivit = []
+        naytetyt_laituri_saapuu = set()
         for aj in aseman_junat_data:
             t_num = aj.get("trainNumber")
+            if t_num in naytetyt_laituri_saapuu:
+                continue
+            naytetyt_laituri_saapuu.add(t_num)
+
             t_tyyppi = aj.get("trainType")
             cancelled = aj.get("cancelled", False)
             timetable = aj.get("timeTableRows", [])
@@ -661,6 +671,7 @@ if st.session_state.haku_tehty:
             )
         else:
             aktiiviset_junat = []
+            naytetyt_reitti_junat = set()
             nyt = datetime.now(suomi_aika)
 
             for juna in junat:
@@ -668,6 +679,10 @@ if st.session_state.haku_tehty:
                     continue
 
                 train_num = juna.get("trainNumber")
+                if train_num in naytetyt_reitti_junat:
+                    continue
+                naytetyt_reitti_junat.add(train_num)
+
                 train_type = juna.get("trainType")
                 timeTable = juna.get("timeTableRows", [])
 
