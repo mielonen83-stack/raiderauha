@@ -510,39 +510,57 @@ if st.session_state.valittu_live_juna:
             for section in koostumus_data.get("journeySections", []):
                 vaunut = section.get("wagons", [])
                 if vaunut:
-                    for v in vaunut:
-                        v_tyyppi = v.get("wagonType", "Vaunu")
-                        v_nro = v.get("salesNumber", "-")
-                        
-                        kuvaus = f"Vaunu {v_nro}"
-                        ominaisuudet = []
-                        
-                        if v_tyyppi == "Ed":
-                            kuvaus += " (2. luokan matkustajavaunu)"
-                        elif v_tyyppi == "Edfs":
-                            kuvaus += " (Perhevaunu / Leikkipaikka)"
-                            ominaisuudet.append("🧸 Lastenleikkipaikka")
-                        elif v_tyyppi == "Edo":
-                            kuvaus += " (Ohjausvaunu / Bistro)"
-                            ominaisuudet.append("☕ Bistro-myyntipiste")
-                        elif v_tyyppi == "ERd":
-                            kuvaus += " (Ravintolavaunu)"
-                            ominaisuudet.append("🍽️ Ravintolavaunu")
-                        elif v_tyyppi == "CEd":
-                            kuvaus += " (InterCity-vaunu)"
-                        else:
-                            kuvaus += f" ({v_tyyppi})"
+                    st.markdown("---")
+                    cols = st.columns(min(len(vaunut), 4))
+                    for idx, v in enumerate(vaunut):
+                        col_idx = idx % len(cols)
+                        with cols[col_idx]:
+                            v_tyyppi = v.get("wagonType", "Vaunu")
+                            v_nro = v.get("salesNumber", "-")
+                            
+                            ikoni = "🚃"
+                            kuvaus = f"Vaunu {v_nro}"
+                            
+                            if v_tyyppi == "Ed":
+                                kuvaus = f"Vaunu {v_nro} (2. luokka)"
+                            elif v_tyyppi == "Edfs":
+                                ikoni = "🧸"
+                                kuvaus = f"Vaunu {v_nro} (Perhe)"
+                            elif v_tyyppi == "Edo":
+                                ikoni = "☕"
+                                kuvaus = f"Vaunu {v_nro} (Bistro)"
+                            elif v_tyyppi == "ERd":
+                                ikoni = "🍽️"
+                                kuvaus = f"Vaunu {v_nro} (Ravintola)"
+                            elif v_tyyppi == "Eds":
+                                ikoni = "🛋️"
+                                kuvaus = f"Vaunu {v_nro} (InterCity)"
+                            else:
+                                kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
 
-                        if v.get("accessibility", False):
-                            ominaisuudet.append("♿ Inva-paikat")
-                        if v.get("petsAllowed", False):
-                            ominaisuudet.append("🐾 Lemmikkipaikat")
-                        
-                        rivi_teksti = f"- **{kuvaus}**"
-                        if ominaisuudet:
-                            rivi_teksti += f" – *{' | '.join(ominaisuudet)}*"
-                        
-                        st.markdown(rivi_teksti)
+                            tiedot = []
+                            if v.get("luggage", False) or "bicycle" in str(v).lower():
+                                tiedot.append("🚲 Pyöräpaikka")
+                                
+                            if v.get("petsAllowed", False):
+                                tiedot.append("🐾 Lemmikit sallittu")
+                            else:
+                                tiedot.append("🚫 Ei lemmikkejä")
+                                
+                            if v.get("accessibility", False):
+                                tiedot.append("♿ Esteetön / Inva")
+                                
+                            if v_tyyppi == "Edfs":
+                                tiedot.append("🧸 Lastenleikkipaikka")
+                            elif v_tyyppi in ["Edo", "ERd"]:
+                                tiedot.append("☕ Ravintola / Bistro")
+
+                            st.markdown(f"### {ikoni} **{kuvaus}**")
+                            if tiedot:
+                                st.caption(" \n".join([f"- {t}" for t in tiedot]))
+                            else:
+                                st.caption("- Perusvaunu")
+                    st.markdown("---")
                 else:
                     st.info("Ei tarkempia vaunutietoja saatavilla tälle vuorolle.")
         else:
@@ -930,38 +948,57 @@ if st.session_state.haku_tehty:
                             for sec in reitti_koostumus.get("journeySections", []):
                                 v_list = sec.get("wagons", [])
                                 if v_list:
-                                    for v in v_list:
-                                        v_tyyppi = v.get("wagonType", "Vaunu")
-                                        v_nro = v.get("salesNumber", "-")
-                                        
-                                        kuvaus = f"Vaunu {v_nro}"
-                                        ominaisuudet = []
-                                        
-                                        if v_tyyppi == "Ed":
-                                            kuvaus += " (2. luokan matkustajavaunu)"
-                                        elif v_tyyppi == "Edfs":
-                                            kuvaus += " (Perhevaunu / Leikkipaikka)"
-                                            ominaisuudet.append("🧸 Lastenleikkipaikka")
-                                        elif v_tyyppi == "Edo":
-                                            kuvaus += " (Ohjausvaunu / Bistro)"
-                                            ominaisuudet.append("☕ Bistro-myyntipiste")
-                                        elif v_tyyppi == "ERd":
-                                            kuvaus += " (Ravintolavaunu)"
-                                            ominaisuudet.append("🍽️ Ravintolavaunu")
-                                        elif v_tyyppi == "CEd":
-                                            kuvaus += " (InterCity-vaunu)"
-                                        else:
-                                            kuvaus += f" ({v_tyyppi})"
+                                    st.markdown("---")
+                                    cols = st.columns(min(len(v_list), 4))
+                                    for idx, v in enumerate(v_list):
+                                        col_idx = idx % len(cols)
+                                        with cols[col_idx]:
+                                            v_tyyppi = v.get("wagonType", "Vaunu")
+                                            v_nro = v.get("salesNumber", "-")
+                                            
+                                            ikoni = "🚃"
+                                            kuvaus = f"Vaunu {v_nro}"
+                                            
+                                            if v_tyyppi == "Ed":
+                                                kuvaus = f"Vaunu {v_nro} (2. luokka)"
+                                            elif v_tyyppi == "Edfs":
+                                                ikoni = "🧸"
+                                                kuvaus = f"Vaunu {v_nro} (Perhe)"
+                                            elif v_tyyppi == "Edo":
+                                                ikoni = "☕"
+                                                kuvaus = f"Vaunu {v_nro} (Bistro)"
+                                            elif v_tyyppi == "ERd":
+                                                ikoni = "🍽️"
+                                                kuvaus = f"Vaunu {v_nro} (Ravintola)"
+                                            elif v_tyyppi == "Eds":
+                                                ikoni = "🛋️"
+                                                kuvaus = f"Vaunu {v_nro} (InterCity)"
+                                            else:
+                                                kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
 
-                                        if v.get("accessibility", False):
-                                            ominaisuudet.append("♿ Inva-paikat")
-                                        if v.get("petsAllowed", False):
-                                            ominaisuudet.append("🐾 Lemmikkipaikat")
-                                        
-                                        r_teksti = f"- **{kuvaus}**"
-                                        if ominaisuudet:
-                                            r_teksti += f" – *{' | '.join(ominaisuudet)}*"
-                                        st.markdown(r_teksti)
+                                            tiedot = []
+                                            if v.get("luggage", False) or "bicycle" in str(v).lower():
+                                                tiedot.append("🚲 Pyöräpaikka")
+                                                
+                                            if v.get("petsAllowed", False):
+                                                tiedot.append("🐾 Lemmikit sallittu")
+                                            else:
+                                                tiedot.append("🚫 Ei lemmikkejä")
+                                                
+                                            if v.get("accessibility", False):
+                                                tiedot.append("♿ Esteetön / Inva")
+                                                
+                                            if v_tyyppi == "Edfs":
+                                                tiedot.append("🧸 Lastenleikkipaikka")
+                                            elif v_tyyppi in ["Edo", "ERd"]:
+                                                tiedot.append("☕ Ravintola / Bistro")
+
+                                            st.markdown(f"### {ikoni} **{kuvaus}**")
+                                            if tiedot:
+                                                st.caption(" \n".join([f"- {t}" for t in tiedot]))
+                                            else:
+                                                st.caption("- Perusvaunu")
+                                    st.markdown("---")
 
                         sijainti = hae_junan_sijainti(str(j_nro))
                         if sijainti:
