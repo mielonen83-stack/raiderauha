@@ -913,11 +913,13 @@ if st.session_state.haku_tehty:
                         if not is_today:
                             tila = f"📅 Päivä {valittu_pvm.strftime('%d.%m.')}"
                         elif nyt <= lahto_dt:
-                            erotus_min = int((lahto_dt - nyt).total_seconds() / 60)
-                            if erotus_min <= 15:
-                                tila = f"⏳ Lähtee pian (n. {erotus_min} min päästä)"
+                            erotus_minuutteina = int((lahto_dt - nyt).total_seconds() / 60)
+                            if erotus_minuutteina <= 60:
+                                tila = f"⏳ Lähtee pian (n. {erotus_minuutteina} min päästä)"
                             else:
-                                tila = f"⏳ Lähtöön {erotus_min} min"
+                                tunnit = erotus_minuutteina // 60
+                                joiden_minuutit = erotus_minuutteina % 60
+                                tila = f"⏳ Lähtöön {tunnit} t {joiden_minuutit} min"
                         else:
                             tila = "🟢 Junassa / Matkalla"
 
