@@ -5,6 +5,7 @@ import csv
 import os
 import pandas as pd
 import requests
+import streamlit as s
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
@@ -232,6 +233,44 @@ def hae_junan_perustiedot(juna_numero):
   except Exception:
     pass
   return None
+
+
+@st.cache_data(ttl=3600)
+def hae_junan_historiatilastot(juna_numero):
+  """Paketti 2: Hakee menneiden päivien myöhästymistilastoja junan numerolla"""
+  keski_myohassa = 0
+  otanta = 0
+  for i in range(1, 4):
+    mennyt_pvm = (date.today() - timedelta(days=i)).strftime("%Y-%m-%d")
+    url = f"https://rata.digitraffic.fi/api/v1/trains/{mennyt_pvm}/{juna_numero}"
+    try:
+      resp = requests.get(url, timeout=2)
+      if resp.status_code == 200:
+        data = resp.json()
+        if isinstance(data, list) and len(data) > 0:
+          t = data[0]
+          for rivi in reversed(t.get("timeTableRows", [])):
+            if rivi.get("differenceInMinutes") is not None:
+              keski_myohassa += rivi.get("differenceInMinutes")
+              otanta += 1
+              break
+    except Exception:
+      pass
+  if otanta > 0:
+    return round(keski_myohassa / otanta, 1)
+  return None
+
+
+def LaskeEtaisyysJaAika(lat1, lon1, lat2, lon2):
+  """Paketti 2: Laskee etäisyyden ja karkean keskinopeuden/keston"""
+  R = 6371.0
+  dLat = radians(lat2 - lat1)
+  dLon = radians(lon2 - lon1)
+  a = sin(dLat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dLon / 2) ** 2
+  c = 2 * atan2(sqrt(a), sqrt(1 - a))
+  linnun_matka = R * c
+  rata_matka = linnun_matka * 1.25  # Rautatie mutkittelee aina hieman linnuntietä enemmän
+  return round(rata_matka, 1)
 
 
 asema_dict = hae_asemat()
@@ -737,45 +776,13 @@ with laituri_tab2:
 
 st.divider()
 
-st.markdown("### 🚉 Asemakohtaiset tiedotteet & Sää")
-a_tab1, a_tab2 = st.tabs([
-    "Poikkeustiedotteet",
-    "Radan varren säätiedot",
-])
-
-with a_tab1:
-  st.caption(f"Viralliset tiedotteet asemalta {valittu_lahto_nimi}.")
-  asema_tiedotteet = hae_aseman_tiedotteet(lahto)
-  if asema_tiedotteet:
-    for tiedote in asema_tiedotteet[:3]:
-      t_otsikko = tiedote.get("title", "Tiedote")
-      t_ingressi = tiedote.get("ingress", "")
-      st.info(f"**{t_otsikko}**\n\n{t_ingressi}")
-  else:
-    st.success("Ei asemakohtaisia poikkeustiedotteita.")
-
-with a_tab2:
-  st.caption("Reaaliaikaiset radan varren mittauspisteet.")
-  radan_saat = hae_radan_saatiedot()
-  if radan_saat:
-    s_list = []
-    for rs in radan_saat[:5]:
-      piste = rs.get("stationName", "Mittauspiste")
-      arvot = rs.get("sensorValues", {})
-      s_list.append({"Piste": piste, "Tiedot": str(arvot)[:100]})
-    st.dataframe(pd.DataFrame(s_list), use_container_width=True)
-  else:
-    st.success("Ei säähäiriöitä radan varrella.")
-
-st.divider()
-
 if st.session_state.haku_tehty:
   st.markdown(
       f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔"
       f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
   )
 
-  # --- PAKETTI 1: REITTIKOHTAINEN HÄIRIÖTARKISTUS ---
+  # Häiriötarkistus (Paketti 1)
   kaikki_hairiot = hae_rautatie_hairiot() + hae_ratatyot_ja_nopeusrajoitukset()
   reitti_hairiot = []
   lahto_lyhenne = valittu_lahto_nimi.split("(")[-1].strip(")")
@@ -805,8 +812,18 @@ if st.session_state.haku_tehty:
         "✅ Ei tiedossa olevia poikkeuksia tai ratatöitä tällä reitillä."
     )
 
+  # Paketti 2: Matkan laskennalliset tiedot (Etäisyys ja keskinopeus)
+  l_lat = asema_dict[valittu_lahto_nimi].get("lat")
+  l_lon = asema_dict[valittu_lahto_nimi].get("lon")
   p_lat = asema_dict[valittu_paikka_nimi].get("lat")
   p_lon = asema_dict[valittu_paikka_nimi].get("lon")
+
+  if l_lat and l_lon and p_lat and p_lon:
+    etaisyys_km = LaskeEtaisyysJaAika(l_lat, l_lon, p_lat, p_lon)
+    st.info(
+        f"📏 **Reitin arvioitu rataetäisyys:** ~{etaisyys_km} km (Linnuntie"
+        f" {round(etaisyys_km / 1.25, 1)} km)"
+    )
 
   if p_lat and p_lon:
     try:
@@ -840,6 +857,7 @@ if st.session_state.haku_tehty:
   else:
     aktiiviset_junat = []
     naytetyt_reitti_junat = set()
+    kartta_koordinaatit = []
 
     for juna in junat:
       j_num = juna.get("trainNumber")
@@ -864,6 +882,8 @@ if st.session_state.haku_tehty:
       lahto_aika_str = ""
       perille_aika_str = ""
       myohassa = 0
+      lahto_dt = None
+      perille_dt = None
 
       for rivi in timeTable:
         if rivi.get("stationShortCode") == lahto and rivi.get("type") == "DEPARTURE":
@@ -873,31 +893,60 @@ if st.session_state.haku_tehty:
             myohassa = diff
           if sch:
             try:
-              dt = datetime.fromisoformat(
+              lahto_dt = datetime.fromisoformat(
                   sch.replace("Z", "+00:00")
               ).astimezone(suomi_aika)
-              lahto_aika_str = dt.strftime("%H:%M")
+              lahto_aika_str = lahto_dt.strftime("%H:%M")
             except Exception:
               pass
         if rivi.get("stationShortCode") == paikka and rivi.get("type") == "ARRIVAL":
           sch = rivi.get("scheduledTime")
           if sch:
             try:
-              dt = datetime.fromisoformat(
+              perille_dt = datetime.fromisoformat(
                   sch.replace("Z", "+00:00")
               ).astimezone(suomi_aika)
-              perille_aika_str = dt.strftime("%H:%M")
+              perille_aika_str = perille_dt.strftime("%H:%M")
             except Exception:
               pass
+
+      # Paketti 2: Matka-aika ja keskinopeuden laskenta aikataulusta
+      keskinopeus_arvio = 0
+      kesto_min = 0
+      if lahto_dt and perille_dt:
+        kesto_min = int((perille_dt - lahto_dt).total_seconds() / 60)
+        if kesto_min > 0 and 'etaisyys_km' in locals():
+          keskinopeus_arvio = round(etaisyys_km / (kesto_min / 60))
+
+      # Haetaan historia-myöhästymiset
+      historia_myohassa = hae_junan_historiatilastot(j_num)
+
+      # Paketti 2: Tarkistetaan onko tällä junalla live-sijainti kartalle
+      live_sijainti = hae_junan_sijainti(j_num)
+      if live_sijainti:
+        kartta_koordinaatit.append({
+            "lat": live_sijainti["lat"],
+            "lon": live_sijainti["lon"],
+            "juna": f"{t_tyyppi} {j_num}",
+        })
 
       aktiiviset_junat.append({
           "numero": j_num,
           "tyyppi": t_tyyppi,
           "lahto": lahto_aika_str,
           "perille": perille_aika_str,
+          "kesto": kesto_min,
+          "keskinopeus": keskinopeus_arvio,
+          "historia": historia_myohassa,
           "myohassa": myohassa,
           "peruttu": peruttu,
       })
+
+    # --- PAKETTI 2: KAIKKI REITIN JUNAT KARTALLA ---
+    if kartta_koordinaatit:
+      st.markdown("#### 🗺️ Kaikki reitillä liikkuvat junat kartalla livenä")
+      df_reitti_kartta = pd.DataFrame(kartta_koordinaatit)
+      st.map(df_reitti_kartta, zoom=6, use_container_width=True)
 
     if aktiiviset_junat:
       for j in aktiiviset_junat:
@@ -910,12 +959,24 @@ if st.session_state.haku_tehty:
                 else "Aikataulussa ✅"
             )
         )
-        st.markdown(
-            f"🚆 **{j['tyyppi']} {j['numero']}**\n\nLähtö: {j['lahto']} ➔"
-            f" Perille: {j['perille']}\nTila: {tila_teksti}"
+
+        historia_teksti = (
+            f"📊 Viime päivinä keskimäärin +{j['historia']} min myöhässä"
+            if j["historia"] is not None
+            else "📊 Historiatietoa ei saatavilla"
+        )
+        matka_info = (
+            f"⏱️ Matka-aika: ~{j['kesto']} min | Keskinopeusarvio:"
+            f" ~{j['keskinopeus']} km/h"
+            if j["kesto"] > 0
+            else ""
         )
 
-        # --- PAKETTI 1: LIPPULINKKI / OSTOPAINIKE ---
+        st.markdown(
+            f"🚆 **{j['tyyppi']} {j['numero']}**\n\nLähtö: {j['lahto']} ➔"
+            f" Perille: {j['perille']}\n{matka_info}\nTila: {tila_teksti}\n*{historia_teksti}*"
+        )
+
         col_nappi1, col_nappi2 = st.columns([1, 1])
         with col_nappi1:
           if st.button(
