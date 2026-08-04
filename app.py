@@ -42,11 +42,9 @@ if "suosikit" not in st.session_state:
 if "seuratut_junat" not in st.session_state:
     st.session_state.seuratut_junat = ["23"]
 
+# Tila suoralle liveseuranta-valinnalle sivupalkista
 if "valittu_live_juna" not in st.session_state:
     st.session_state.valittu_live_juna = None
-
-if "piilotetut_kartat" not in st.session_state:
-    st.session_state.piilotetut_kartat = set()
 
 if "paivan_vitsi" not in st.session_state:
     st.session_state.paivan_vitsi = (
@@ -267,7 +265,7 @@ if hairiot:
         kuvaus = h.get("ingress", "")
         st.sidebar.warning(f"**{otsikko}**\n\n{kuvaus}")
 else:
-    st.sidebar.success("Ei tiedossa olevia rataliikennehäiriöitä.")
+    st.sidebar.success("Ei tiedossa olevia rataliikennehäiriötä.")
 
 st.sidebar.divider()
 st.sidebar.markdown("### 🚧 Ratatyöt & hidastukset")
@@ -497,21 +495,8 @@ if st.session_state.valittu_live_juna:
             kmh_nopeus = round(j_nopeus * 3.6)
 
             st.success(f"📍 **Live-sijainti:** Juna etenee nopeudella **{kmh_nopeus} km/h**.")
-            
-            # Kartan sulkumahdollisuus
-            kartta_ava = f"live_{valittu_nro}"
-            if kartta_ava not in st.session_state.piilotetut_kartat:
-                col_k1, col_k2 = st.columns([6, 1])
-                with col_k2:
-                    if st.button("Sulje kartta ❌", key=f"sulje_{kartta_ava}"):
-                        st.session_state.piilotetut_kartat.add(kartta_ava)
-                        st.rerun()
-                df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
-                st.map(df_kartta, zoom=7, use_container_width=True)
-            else:
-                if st.button("🗺️ Näytä kartta uudelleen", key=f"nayta_{kartta_ava}"):
-                    st.session_state.piilotetut_kartat.remove(kartta_ava)
-                    st.rerun()
+            df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
+            st.map(df_kartta, zoom=7, use_container_width=True)
         else:
             st.warning("ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä hetkellä saatavilla.")
 
@@ -522,11 +507,6 @@ if st.session_state.valittu_live_juna:
             if s_koodi not in koodi_to_nimi:
                 continue
             r_tyyppi = rivi.get("type")
-            r_tyyppi_suomeksi = (
-                "Lähtö"
-                if r_tyyppi == "DEPARTURE"
-                else ("Saapuminen" if r_tyyppi == "ARRIVAL" else r_tyyppi)
-            )
             a_aika = rivi.get("scheduledTime")
             ero = rivi.get("differenceInMinutes", 0)
             track = rivi.get("commercialTrack")
@@ -539,7 +519,7 @@ if st.session_state.valittu_live_juna:
                     ).astimezone(suomi_aika)
                     aikataulu_rivit.append({
                         "Asema": koodi_to_nimi.get(s_koodi, s_koodi),
-                        "Tapahtuma": r_tyyppi_suomeksi,
+                        "Tyyppi": r_tyyppi,
                         "Aika": dt_aika.strftime("%H:%M"),
                         "Raide": raide,
                         "Myöhässä (min)": ero,
@@ -869,21 +849,8 @@ if st.session_state.haku_tehty:
                         if sijainti:
                             kmh = round(sijainti["nopeus"] * 3.6)
                             st.success(f"📍 **Live-sijainti löydetty!** Nopeus tällä hetkellä **{kmh} km/h**.")
-                            
-                            # Kartan sulkumahdollisuus reittihakuun
-                            kartta_ava_haku = f"reitti_{j_nro}"
-                            if kartta_ava_haku not in st.session_state.piilotetut_kartat:
-                                col_hk1, col_hk2 = st.columns([6, 1])
-                                with col_hk2:
-                                    if st.button("Sulje kartta ❌", key=f"sulje_{kartta_ava_haku}"):
-                                        st.session_state.piilotetut_kartat.add(kartta_ava_haku)
-                                        st.rerun()
-                                df_k = pd.DataFrame({"lat": [sijainti["lat"]], "lon": [sijainti["lon"]]})
-                                st.map(df_k, zoom=8, use_container_width=True)
-                            else:
-                                if st.button("🗺️ Näytä kartta uudelleen", key=f"nayta_{kartta_ava_haku}"):
-                                    st.session_state.piilotetut_kartat.remove(kartta_ava_haku)
-                                    st.rerun()
+                            df_k = pd.DataFrame({"lat": [sijainti["lat"]], "lon": [sijainti["lon"]]})
+                            st.map(df_k, zoom=8, use_container_width=True)
                         else:
                             st.info("ℹ️ Junan reaaliaikainen GPS-sijainti ei ole juuri nyt saatavilla.")
 
