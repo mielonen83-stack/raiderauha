@@ -433,7 +433,8 @@ st.sidebar.caption(
 # --- PÄÄSIVU ---
 st.title("🚆 Raidetutka")
 st.markdown(
-    "##### *Ammattimainen reaaliaikainen junatutka, laiturinäytöt ja vaunukoostumukset*"
+    "##### *Ammattimainen reaaliaikainen junatutka, laiturinäytöt ja"
+    " vaunukoostumukset*"
 )
 st.divider()
 
@@ -770,8 +771,39 @@ st.divider()
 
 if st.session_state.haku_tehty:
   st.markdown(
-      f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
+      f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔"
+      f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
   )
+
+  # --- PAKETTI 1: REITTIKOHTAINEN HÄIRIÖTARKISTUS ---
+  kaikki_hairiot = hae_rautatie_hairiot() + hae_ratatyot_ja_nopeusrajoitukset()
+  reitti_hairiot = []
+  lahto_lyhenne = valittu_lahto_nimi.split("(")[-1].strip(")")
+  paikka_lyhenne = valittu_paikka_nimi.split("(")[-1].strip(")")
+
+  for h in kaikki_hairiot:
+    h_teksti = (
+        h.get("title", "") + " " + h.get("ingress", "") + " " + h.get("body", "")
+    ).upper()
+    if (
+        lahto_lyhenne in h_teksti
+        or paikka_lyhenne in h_teksti
+        or valittu_lahto_nimi.split(" ")[0].upper() in h_teksti
+        or valittu_paikka_nimi.split(" ")[0].upper() in h_teksti
+    ):
+      reitti_hairiot.append(h)
+
+  if reitti_hairiot:
+    st.error(
+        "⚠️ **Huomio!** Valitsemallesi reitille tai sen asemille on kirjattu"
+        " poikkeuksia tai ratatöitä:"
+    )
+    for rh in reitti_hairiot[:2]:
+      st.warning(f"**{rh.get('title', 'Häiriö')}**: {rh.get('ingress', '')}")
+  else:
+    st.success(
+        "✅ Ei tiedossa olevia poikkeuksia tai ratatöitä tällä reitillä."
+    )
 
   p_lat = asema_dict[valittu_paikka_nimi].get("lat")
   p_lon = asema_dict[valittu_paikka_nimi].get("lon")
@@ -882,12 +914,24 @@ if st.session_state.haku_tehty:
             f"🚆 **{j['tyyppi']} {j['numero']}**\n\nLähtö: {j['lahto']} ➔"
             f" Perille: {j['perille']}\nTila: {tila_teksti}"
         )
-        if st.button(
-            f"📡 Valitse ja katso live-seuranta ({j['numero']})",
-            key=f"valitse_reitti_{j['numero']}",
-        ):
-          st.session_state.valittu_live_juna = str(j["numero"])
-          st.rerun()
+
+        # --- PAKETTI 1: LIPPULINKKI / OSTOPAINIKE ---
+        col_nappi1, col_nappi2 = st.columns([1, 1])
+        with col_nappi1:
+          if st.button(
+              f"📡 Valitse live-seuranta ({j['numero']})",
+              key=f"valitse_reitti_{j['numero']}",
+          ):
+            st.session_state.valittu_live_juna = str(j["numero"])
+            st.rerun()
+        with col_nappi2:
+          vr_linkki = "https://www.vr.fi"
+          st.link_button(
+              f"🛒 Osta lippu VR:ltä ({j['tyyppi']} {j['numero']})",
+              vr_linkki,
+              use_container_width=True,
+          )
+
         st.markdown("---")
     else:
       st.warning(
