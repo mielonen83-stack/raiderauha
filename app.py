@@ -342,13 +342,6 @@ for j_nro in st.session_state.seuratut_junat:
 
     st.sidebar.divider()
 
-st.sidebar.markdown("### ♿ Palvelusuodattimet")
-vaadi_pyora = st.sidebar.checkbox("🚲 Pyöräpaikka vaaditaan")
-vaadi_lemmikki = st.sidebar.checkbox("🐾 Lemmikkivaunu vaaditaan")
-vaadi_esteeton = st.sidebar.checkbox("♿ Esteetön vaunu vaaditaan")
-
-st.sidebar.divider()
-
 if st.session_state.suosikit:
     st.sidebar.markdown("### ⭐ Suosikkireitit")
     for idx, (s_lahto, s_paikka) in enumerate(st.session_state.suosikit):
@@ -795,8 +788,6 @@ if st.session_state.haku_tehty:
         f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔ **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
     )
 
-    l_lat = asema_dict[valittu_lahto_nimi].get("lat")
-    l_lon = asema_dict[valittu_lahto_nimi].get("lon")
     p_lat = asema_dict[valittu_paikka_nimi].get("lat")
     p_lon = asema_dict[valittu_paikka_nimi].get("lon")
 
@@ -808,21 +799,6 @@ if st.session_state.haku_tehty:
             st.success(f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}):** {lampo}°C")
         except Exception:
             pass
-
-    if l_lat and l_lon and p_lat and p_lon:
-        R = 6371
-        dLat = radians(p_lat - l_lat)
-        dLon = radians(p_lon - l_lon)
-        a = sin(dLat / 2) ** 2 + cos(radians(l_lat)) * cos(radians(p_lat)) * sin(dLon / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        etaisyys_km = R * c
-        todellinen_arvio_km = etaisyys_km * 1.2
-        auton_paastot_kg = (todellinen_arvio_km * 120) / 1000
-        saastetty_co2 = auton_paastot_kg
-
-        st.info(
-            f"🌱 **Ympäristövaikutus:** Junamatkustaminen tällä noin **{todellinen_arvio_km:.0f} km** matkalla säästää arviolta **{saastetty_co2:.1f} kg CO₂** -päästöjä maantiekuljetukseen verrattuna."
-        )
 
     st.markdown("Valitse alta haluamasi junavuoro nähdäksesi tarkat tiedot ja reaaliaikaisen sijainnin:")
 
