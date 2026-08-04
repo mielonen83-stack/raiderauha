@@ -538,18 +538,28 @@ if st.session_state.valittu_live_juna:
                             else:
                                 kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
 
+                            # Tarkistetaan vaunun tiedot kattavasti
                             tiedot = []
-                            if v.get("luggage", False) or "bicycle" in str(v).lower():
-                                tiedot.append("🚲 Pyöräpaikka")
+                            
+                            # Pyöräpaikat (tarkistetaan ominaisuudet tai tyyppipäätelmä)
+                            if v.get("luggage", False) or "bicycle" in str(v).lower() or v_tyyppi in ["Eds", "Ed"]:
+                                tiedot.append("🚲 Pyöräpaikka mahdollinen")
+                            else:
+                                tiedot.append("🚲 Ei pyöräpaikkaa")
                                 
-                            if v.get("petsAllowed", False):
+                            # Lemmikit
+                            if v.get("petsAllowed", True):  # Oletusarvoisesti sallittu useimmissa vaunuissa
                                 tiedot.append("🐾 Lemmikit sallittu")
                             else:
                                 tiedot.append("🚫 Ei lemmikkejä")
                                 
-                            if v.get("accessibility", False):
+                            # Esteettömyys
+                            if v.get("accessibility", False) or v_tyyppi in ["Edfs", "Edo"]:
                                 tiedot.append("♿ Esteetön / Inva")
+                            else:
+                                tiedot.append("♿ Peruspaikka")
                                 
+                            # Erikoisuudet
                             if v_tyyppi == "Edfs":
                                 tiedot.append("🧸 Lastenleikkipaikka")
                             elif v_tyyppi in ["Edo", "ERd"]:
@@ -977,16 +987,20 @@ if st.session_state.haku_tehty:
                                                 kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
 
                                             tiedot = []
-                                            if v.get("luggage", False) or "bicycle" in str(v).lower():
-                                                tiedot.append("🚲 Pyöräpaikka")
+                                            if v.get("luggage", False) or "bicycle" in str(v).lower() or v_tyyppi in ["Eds", "Ed"]:
+                                                tiedot.append("🚲 Pyöräpaikka mahdollinen")
+                                            else:
+                                                tiedot.append("🚲 Ei pyöräpaikkaa")
                                                 
-                                            if v.get("petsAllowed", False):
+                                            if v.get("petsAllowed", True):
                                                 tiedot.append("🐾 Lemmikit sallittu")
                                             else:
                                                 tiedot.append("🚫 Ei lemmikkejä")
                                                 
-                                            if v.get("accessibility", False):
+                                            if v.get("accessibility", False) or v_tyyppi in ["Edfs", "Edo"]:
                                                 tiedot.append("♿ Esteetön / Inva")
+                                            else:
+                                                tiedot.append("♿ Peruspaikka")
                                                 
                                             if v_tyyppi == "Edfs":
                                                 tiedot.append("🧸 Lastenleikkipaikka")
