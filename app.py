@@ -454,7 +454,8 @@ with laituri_tab1:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = str(r.get("commercialTrack", "-"))[:3]
+                    track = r.get("commercialTrack")
+                    track_str = str(track) if track is not None else "-"
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -473,7 +474,7 @@ with laituri_tab1:
                                 "Aika": dt.strftime("%H:%M"),
                                 "Juna": f"{t_tyyppi} {t_num}",
                                 "Määränpää": paateasema_nimi,
-                                "Raide": track,
+                                "Raide": track_str,
                                 "Tila": (
                                     "Peruttu ❌"
                                     if cancelled
@@ -512,7 +513,8 @@ with laituri_tab2:
                 ):
                     sch = r.get("scheduledTime")
                     diff = r.get("differenceInMinutes", 0)
-                    track = str(r.get("commercialTrack", "-"))[:3]
+                    track = r.get("commercialTrack")
+                    track_str = str(track) if track is not None else "-"
                     if sch:
                         try:
                             dt = datetime.fromisoformat(
@@ -531,7 +533,7 @@ with laituri_tab2:
                                 "Aika": dt.strftime("%H:%M"),
                                 "Juna": f"{t_tyyppi} {t_num}",
                                 "Lähtöpaikka": lahtoasema_nimi,
-                                "Raide": track,
+                                "Raide": track_str,
                                 "Tila": (
                                     "Peruttu ❌"
                                     if cancelled
@@ -682,9 +684,8 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "DEPARTURE"
                     ):
                         aika_str = rivi.get("scheduledTime")
-                        lahto_raide = str(
-                            rivi.get("commercialTrack", "-")
-                        )[:3]
+                        track = rivi.get("commercialTrack")
+                        lahto_raide = str(track) if track is not None else "-"
                         if aika_str:
                             try:
                                 dt_obj = datetime.fromisoformat(
@@ -699,9 +700,10 @@ if st.session_state.haku_tehty:
                         and rivi.get("type") == "ARRIVAL"
                     ):
                         aika_str = rivi.get("scheduledTime")
-                        saapumis_raide = str(
-                            rivi.get("commercialTrack", "-")
-                        )[:3]
+                        track = rivi.get("commercialTrack")
+                        saapumis_raide = (
+                            str(track) if track is not None else "-"
+                        )
                         if aika_str:
                             try:
                                 dt_obj = datetime.fromisoformat(
@@ -720,8 +722,18 @@ if st.session_state.haku_tehty:
                     ):
                         if not is_today:
                             tila = f"📅 Päivä {valittu_pvm.strftime('%d.%m.')}"
-                        elif nyt < lahto_dt:
-                            tila = "⏳ Lähtee pian"
+                        elif nyt <= lahto_dt:
+                            erotus_min = int(
+                                (lahto_dt - nyt).total_seconds() / 60
+                            )
+                            if erotus_min <= 15:
+                                tila = f"⏳ Lähtee pian (n. {erotus_min} min päästä)"
+                            elif erotus_min < 120:
+                                tila = f"⏳ Lähtee {erotus_min} min päästä"
+                            else:
+                                tila = (
+                                    f"⏳ Lähtee tänään klo {lahto_aika_str}"
+                                )
                         else:
                             tila = "🟢 Juuri nyt matkalla"
 
@@ -778,7 +790,7 @@ if st.session_state.haku_tehty:
                                     "wifi": True,
                                     "pet": False,
                                     "accessible": True,
-                                    "bicycle": False,  # Korjattu: Ei pyörää Ekstraan
+                                    "bicycle": False,
                                 },
                                 {
                                     "wagonType": "Ravintola",
@@ -786,9 +798,7 @@ if st.session_state.haku_tehty:
                                     "wifi": True,
                                     "pet": False,
                                     "accessible": True,
-                                    "bicycle": (
-                                        False  # Korjattu: Ei pyörää ravintolaan
-                                    ),
+                                    "bicycle": False,
                                 },
                                 {
                                     "wagonType": "InterCity",
@@ -900,9 +910,10 @@ if st.session_state.haku_tehty:
                                 r_tyyppi = rivi.get("type")
                                 a_aika = rivi.get("scheduledTime")
                                 ero = rivi.get("differenceInMinutes", 0)
-                                raide = str(
-                                    rivi.get("commercialTrack", "-")
-                                )[:3]
+                                track = rivi.get("commercialTrack")
+                                raide = (
+                                    str(track) if track is not None else "-"
+                                )
 
                                 if a_aika:
                                     try:
@@ -957,7 +968,6 @@ if st.session_state.haku_tehty:
                             for v in vaunut:
                                 v_tyyppi_nimi = v.get("wagonType", "-")
 
-                                # Älykäs tarkistus: Jos kyseessä on ravintolavauna tai Ekstra-luokka, poistetaan pyöräpaikka/lemmikit logiikasta
                                 onko_ravintola = (
                                     "ravintola" in v_tyyppi_nimi.lower()
                                 )
