@@ -42,6 +42,10 @@ if "suosikit" not in st.session_state:
 if "seuratut_junat" not in st.session_state:
     st.session_state.seuratut_junat = ["23"]
 
+# Tila suoralle liveseuranta-valinnalle sivupalkista
+if "valittu_live_juna" not in st.session_state:
+    st.session_state.valittu_live_juna = None
+
 if "paivan_vitsi" not in st.session_state:
     st.session_state.paivan_vitsi = (
         "Miksi juna pysähtyi keskelle metsää? – Konduktööri unohti pyyhkiä pyyhkijät"
@@ -302,6 +306,7 @@ with col_lisaa:
 with col_poista:
     if st.button("Tyhjennä lista"):
         st.session_state.seuratut_junat = []
+        st.session_state.valittu_live_juna = None
         st.rerun()
 
 for j_nro in st.session_state.seuratut_junat:
@@ -322,7 +327,6 @@ for j_nro in st.session_state.seuratut_junat:
             lahto_asema = koodi_to_nimi.get(lahto_koodi, lahto_koodi)
             paate_asema = koodi_to_nimi.get(paate_koodi, paate_koodi)
 
-            # Tarkistetaan viimeisin myöhästyminen
             for rivi in reversed(taulukko):
                 if rivi.get("differenceInMinutes") is not None:
                     myohassa_min = rivi.get("differenceInMinutes")
@@ -342,6 +346,12 @@ for j_nro in st.session_state.seuratut_junat:
         st.sidebar.error(f"⚠️ Myöhässä: +{myohassa_min} min")
     else:
         st.sidebar.success("✅ Ajallaan")
+
+    # Nappi siirtymiseen suoraan kyseisen junan liveseurantaan pääruudulla
+    if st.sidebar.button(
+        f"📡 Avaa liveseuranta ({j_nro})", key=f"live_btn_{j_nro}"
+    ):
+        st.session_state.valittu_live_juna = j_nro
 
     st.sidebar.divider()
 
@@ -410,6 +420,9 @@ hakunappi = st.sidebar.button("🔍 Raidetutka", type="primary")
 
 if hakunappi:
     st.session_state.haku_tehty = True
+    st.session_state.valittu_live_juna = (
+        None  # Nollataan erillinen livehaku, jos tehdään uusi perusreittihaku
+    )
 
 # --- PALAUTELOMAKE SIVUPALKISSA ---
 st.sidebar.divider()
@@ -478,6 +491,90 @@ st.markdown(
 )
 st.divider()
 
+# --- JOS SIVUPALKKISSA KLIKATTU SUORAA LIVESEURANTAA ---
+suomi_aika = ZoneInfo("Europe/Helsinki")
+
+if st.session_state.valittu_live_juna:
+    valittu_nro = st.session_state.valittu_live_juna
+    st.markdown(
+        f"### 📡 Junan **{valittu_nro}** erillinen liveseuranta & tiedot"
+    )
+
+    if st.button("⬅️ Palaa takaisin perusnäkymään"):
+        st.session_state.valittu_live_juna = None
+        st.rerun()
+
+    juna_info = hae_junan_perustiedot(valittu_nro)
+    if juna_info:
+        t_tyyppi = juna_info.get("trainType", "Juna")
+        timeTable = juna_info.get("timeTableRows", [])
+
+        lahto_koodi = timeTable[0].get("stationShortCode") if timeTable else ""
+        paate_koodi = (
+            timeTable[-1].get("stationShortCode") if timeTable else ""
+        )
+        l_nimi = koodi_to_nimi.get(lahto_koodi, lahto_koodi)
+        p_nimi = koodi_to_nimi.get(paate_koodi, paate_koodi)
+
+        st.info(f"Reitti: **{l_nimi} ➔ {p_nimi}** (Tyyppi: {t_tyyppi})")
+
+        sijainti_data = hae_junan_sijainti(valittu_nro)
+        if sijainti_data:
+            j_lat = sijainti_data["lat"]
+            j_lon = sijainti_data["lon"]
+            j_nopeus = sijainti_data["nopeus"]
+            kmh_nopeus = round(j_nopeus * 3.6)
+
+            st.success(
+                f"📍 **Live-sijainti:** Juna etenee nopeudella"
+                f" **{kmh_nopeus} km/h**."
+            )
+            df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
+            st.map(df_kartta, zoom=7, use_container_width=True)
+        else:
+            st.warning(
+                "ℹ️ Junan reaaliaikainen GPS-sijainti ei ole tällä hetkellä"
+                " saatavilla."
+            )
+
+        st.markdown("#### 📍 Tämän vuoron tarkka aikataulu")
+        aikataulu_rivit = []
+        for rivi in timeTable:
+            s_koodi = rivi.get("stationShortCode")
+            if s_koodi not in koodi_to_nimi:
+                continue
+            r_tyyppi = rivi.get("type")
+            a_aika = rivi.get("scheduledTime")
+            ero = rivi.get("differenceInMinutes", 0)
+            track = rivi.get("commercialTrack")
+            raide = str(track) if track is not None else "-"
+
+            if a_aika:
+                try:
+                    dt_aika = datetime.fromisoformat(
+                        a_aika.replace("Z", "+00:00")
+                    ).astimezone(suomi_aika)
+                    aikataulu_rivit.append({
+                        "Asema": koodi_to_nimi.get(s_koodi, s_koodi),
+                        "Tyyppi": r_tyyppi,
+                        "Aika": dt_aika.strftime("%H:%M"),
+                        "Raide": raide,
+                        "Myöhässä (min)": ero,
+                    })
+                except Exception:
+                    pass
+
+        if aikataulu_rivit:
+            st.dataframe(
+                pd.DataFrame(aikataulu_rivit), use_container_width=True
+            )
+    else:
+        st.error(
+            f"Junan {valittu_nro} tietoja ei löytynyt tälle päivälle."
+        )
+
+    st.divider()
+
 # --- VIRALLINEN LAITURINÄYTTÖ ---
 st.markdown(
     f"### 📺 Virallinen Laiturinäyttö – {valittu_lahto_nimi.split(' ')[0]}"
@@ -488,7 +585,6 @@ st.caption(
 )
 
 laituri_tab1, laituri_tab2 = st.tabs(["🚂 Lähtevät junat", "📥 Saapuvat junat"])
-suomi_aika = ZoneInfo("Europe/Helsinki")
 aseman_junat_data = hae_aseman_junat(lahto)
 
 with laituri_tab1:
@@ -553,10 +649,7 @@ with laituri_tab1:
         else:
             st.info("Ei lähteviä junia tällä hetkellä.")
     else:
-        st.info(
-            "Asemanäyttödataa haetaan tai asemalla ei ole aktiivisia junia"
-            " juuri nyt."
-        )
+        st.info("Asemanäyttödataa haetaan.")
 
 with laituri_tab2:
     if aseman_junat_data:
