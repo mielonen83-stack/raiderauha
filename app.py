@@ -452,6 +452,16 @@ st.divider()
 suomi_aika = ZoneInfo("Europe/Helsinki")
 
 if st.session_state.valittu_live_juna:
+    # Lisätään skripti, joka rullaa sivun automaattisesti ylös seurannan alkuun
+    components.html(
+        """
+        <script>
+            window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'smooth'});
+        </script>
+        """,
+        height=0,
+    )
+
     valittu_nro = st.session_state.valittu_live_juna
     st.markdown(f"### 📡 Junan **{valittu_nro}** Seuranta & Vaunukoostumus")
 
