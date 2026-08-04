@@ -154,6 +154,19 @@ def hae_radan_saatiedot():
     return []
 
 
+@st.cache_data(ttl=300)
+def hae_vaunukoostumus(juna_numero, pvm):
+    url = f"https://rata.digitraffic.fi/api/v1/compositions/{pvm}/{juna_numero}"
+    try:
+        vastaus = requests.get(url, timeout=3)
+        if vastaus.status_code == 200:
+            data = vastaus.json()
+            return data
+    except Exception:
+        pass
+    return None
+
+
 @st.cache_data(ttl=3600)
 def hae_junan_historia_luotettavuus(juna_numero):
     summa_minuutit = 0
@@ -471,7 +484,7 @@ suomi_aika = ZoneInfo("Europe/Helsinki")
 
 if st.session_state.valittu_live_juna:
     valittu_nro = st.session_state.valittu_live_juna
-    st.markdown(f"### 📡 Junan **{valittu_nro}** erillinen liveseuranta & tiedot")
+    st.markdown(f"### 📡 Junan **{valittu_nro}** erillinen liveseuranta, tiedot & vaunukoostumus")
 
     if st.button("⬅️ Palaa takaisin perusnäkymään"):
         st.session_state.valittu_live_juna = None
@@ -488,6 +501,46 @@ if st.session_state.valittu_live_juna:
         p_nimi = koodi_to_nimi.get(paate_koodi, paate_koodi)
 
         st.info(f"Reitti: **{l_nimi} ➔ {p_nimi}** (Tyyppi: {t_tyyppi})")
+
+        # --- VAUNUKOOSTUMUS JA PALVELUT ---
+        tanaan_str = date.today().strftime("%Y-%m-%d")
+        koostumus_data = hae_vaunukoostumus(valittu_nro, tanaan_str)
+        if koostumus_data and "journeySections" in koostumus_data:
+            st.markdown("#### 🚃 Vaunukoostumus & Palvelut")
+            for section in koostumus_data.get("journeySections", []):
+                vaunut = section.get("wagons", [])
+                if vaunut:
+                    for v in vaunut:
+                        v_tyyppi = v.get("wagonType", "Vaunu")
+                        v_nro = v.get("salesNumber", "-")
+                        
+                        # Fiksumpi palveluerottelu vaunutyypin mukaan
+                        attribuutit = []
+                        v_lower = v_tyyppi.lower()
+                        
+                        # Ravintolavaunu (esim. Restaurant car / Edfs tms.)
+                        if "restaurant" in v_lower or "ed" in v_lower:
+                            attribuutit.append("☕ Ravintolavaunu")
+                        
+                        # Vaunun API-tiedot jos saatavilla
+                        if v.get("accessibility", False):
+                            attribuutit.append("♿ Esteetön (Inva)")
+                        if v.get("petsAllowed", False):
+                            attribuutit.append("🐾 Lemmikkipaikat")
+                        
+                        # Oletetaan pyöräpaikat vaunutyyppien perusteella tai jos erikseen merkitty
+                        if "bicycle" in v or "pyörä" in str(v).lower() or "bc" in v_lower:
+                            attribuutit.append("🚲 Pyöräpaikka")
+
+                        vaunutyyppi_teksti = f"Vaunu {v_nro} ({v_tyyppi})"
+                        if attribuutit:
+                            vaunutyyppi_teksti += f" – *{' | '.join(attribuutit)}*"
+                        
+                        st.markdown(f"- {vaunutyyppi_teksti}")
+                else:
+                    st.info("Ei tarkempia vaunutietoja saatavilla tälle vuorolle.")
+        else:
+            st.caption("ℹ️ Vaunukoostumustietoja ei ole saatavilla tälle junalle.")
 
         sijainti_data = hae_junan_sijainti(valittu_nro)
         if sijainti_data:
@@ -864,6 +917,31 @@ if st.session_state.haku_tehty:
                         with col2:
                             historia_myohassa = hae_junan_historia_luotettavuus(str(j_nro))
                             st.markdown(f"**Historiallinen myöhästymisarvio:** ~{historia_myohassa} min")
+
+                        # Vaunukoostumus ja järkevät palvelut reittituloksiin
+                        pvm_str = valittu_pvm.strftime("%Y-%m-%d")
+                        reitti_koostumus = hae_vaunukoostumus(str(j_nro), pvm_str)
+                        if reitti_koostumus and "journeySections" in reitti_koostumus:
+                            st.markdown("**🚃 Vaunukoostumus & Palvelut:**")
+                            for sec in reitti_koostumus.get("journeySections", []):
+                                v_list = sec.get("wagons", [])
+                                if v_list:
+                                    for v in v_list:
+                                        v_tyyppi = v.get("wagonType", "Vaunu")
+                                        attribuutit = []
+                                        v_lower = v_tyyppi.lower()
+                                        
+                                        if "restaurant" in v_lower or "ed" in v_lower:
+                                            attribuutit.append("☕ Ravintolavaunu")
+                                        if v.get("accessibility", False):
+                                            attribuutit.append("♿ Esteetön")
+                                        if v.get("petsAllowed", False):
+                                            attribuutit.append("🐾 Lemmikit")
+                                        
+                                        v_teksti = f"Vaunu {v.get('salesNumber','-')} ({v_tyyppi})"
+                                        if attribuutit:
+                                            v_teksti += f" – *{' | '.join(attribuutit)}*"
+                                        st.caption(f"- {v_teksti}")
 
                         sijainti = hae_junan_sijainti(str(j_nro))
                         if sijainti:
