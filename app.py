@@ -489,6 +489,11 @@ if st.session_state.valittu_live_juna:
             for section in koostumus_data.get("journeySections", []):
                 vaunut = section.get("wagons", [])
                 if vaunut:
+                    try:
+                        vaunut = sorted(vaunut, key=lambda x: int(x.get("salesNumber", 99)))
+                    except Exception:
+                        pass
+
                     st.markdown("---")
                     cols = st.columns(min(len(vaunut), 4))
                     for idx, v in enumerate(vaunut):
@@ -514,25 +519,30 @@ if st.session_state.valittu_live_juna:
                             elif v_tyyppi == "Eds":
                                 ikoni = "🛋️"
                                 kuvaus = f"Vaunu {v_nro} (InterCity)"
+                            elif v_tyyppi == "CEd" or v_tyyppi == "C":
+                                ikoni = "🛏️"
+                                kuvaus = f"Vaunu {v_nro} (Makuuvaunu)"
                             else:
                                 kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
 
                             tiedot = []
-                            if v_tyyppi not in ["ERd", "Rx"]:
+                            if v_tyyppi not in ["ERd", "Rx", "Edo"]:
                                 if v.get("luggage", False):
                                     tiedot.append("🚲 Pyöräpaikka")
-                                if v.get("petsAllowed", True):
+                                if v.get("petsAllowed", False):
                                     tiedot.append("🐾 Lemmikkivaunu")
                                 if v.get("accessibility", False):
                                     tiedot.append("♿ Esteetön paikka")
                             else:
                                 tiedot.append("🍽️ Ravintolapalvelut")
 
+                            palvelut_html = '<br>'.join(tiedot) if tiedot else '<span style="color: #adb5bd;">Perusvaunu</span>'
+
                             st.markdown(
                                 f"""
                                 <div class="wagon-card">
-                                    <h4>{ikoni} {kuvaus}</h4>
-                                    <p style="font-size: 0.85rem; color: #6c757d;">{'<br>'.join(tiedot) if tiedot else 'Vakiopaikka'}</p>
+                                    <div style="font-weight: bold; font-size: 1.05rem; margin-bottom: 5px;">{ikoni} {kuvaus}</div>
+                                    <div style="font-size: 0.85rem; color: #495057;">{palvelut_html}</div>
                                 </div>
                                 """,
                                 unsafe_allow_html=True,
