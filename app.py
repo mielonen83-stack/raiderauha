@@ -9,11 +9,171 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
-# Sivun perusasetukset ja SEO-otsikko
+# --- KIELIKÄÄNNÖKSET (TRANSLATIONS) ---
+TEKSTIT = {
+    "Suomi": {
+        "page_title": "Raidetutka – Reaaliaikainen Junatutka, Aikataulut & Rataliikennehäiriöt",
+        "sidebar_hallinta": "🚆 Raidetutka Hallinta",
+        "live_paivitys": "🔄 Automaattinen live-päivitys (15s)",
+        "hairiot_otsikko": "🚨 Rataliikennehäiriöt",
+        "ei_hairioita": "Ei tiedossa olevia rataliikennehäiriöitä.",
+        "ratatyot_otsikko": "🚧 Ratatyöt & Nopeusrajoitukset",
+        "ei_ratatoita": "Ei aktiivisia ratatöitä tai hidastuksia.",
+        "reitti_seuranta": "🎛️ Reitti & Seuranta",
+        "seuratut_junat": "⭐ Seuratut junat",
+        "lisaa_juna_placeholder": "Esim. 67",
+        "lisaa_juna_btn": "Lisää juna",
+        "tyhjenna_btn": "Tyhjennä",
+        "juna_lisatty": "Juna {nro} lisätty.",
+        "ei_live_paikannusta": "⏳ Ei live-paikannusta",
+        "myohassa_txt": "⚠️ Myöhässä: +{min} min",
+        "ajallaan_txt": "✅ Ajallaan",
+        "avaa_seuranta": "📡 Avaa seuranta ({nro})",
+        "suosikkireitit": "⭐ Suosikkireitit",
+        "tallenna_suosikki": "❤️ Tallenna suosikkireitiksi",
+        "reitti_tallennettu": "Reitti tallennettu suosikkeihin.",
+        "lahtoasema": "Lähtöasema",
+        "maaranpaa": "Määränpää",
+        "matkustuspäivä": "Matkustuspäivä",
+        "hae_reitti": "🔍 Hae reitti",
+        "palaute_otsikko": "💬 Palaute & Kehitysehdotukset",
+        "palaute_nimi": "Nimi (valinnainen)",
+        "palaute_aihe": "Aihealue",
+        "palaute_vaihtoehdot": ["Kehitysehdotus", "Virheilmoitus / Bugi", "Yleinen palaute"],
+        "palaute_placeholder": "Kirjoita palautteesi tähän...",
+        "laheta_palaute": "Lähetä palaute",
+        "palaute_kiitos": "Kiitos palautestasi.",
+        "palaute_virhe": "Tallennusvirhe: {e}",
+        "palaute_tyhja": "Kirjoita palauteteksti ennen lähettämistä.",
+        "footer": "Tiedot: [Fintraffic / Digitraffic (CC 4.0 BY)](https://www.digitraffic.fi) & Open-Meteo.",
+        "pääotsikko": "🚆 Raidetutka",
+        "pääalaotsikko": "##### *Reaaliaikainen junatutka, aikataulut ja vaunukoostumukset*",
+        "palaa_reittihakuun": "⬅️ Palaa reittihakuun",
+        "seuranta_otsikko": "📡 Junan **{nro}** Seuranta & Koostumus",
+        "vaunut_otsikko": "🚃 Vaunukoostumus & Palvelut",
+        "ei_vaunutietoja": "Ei tarkempia vaunutietoja saatavilla.",
+        "ei_vaunutietoja_info": "ℹ️ Vaunukoostumustietoja ei ole saatavilla tälle junalle.",
+        "gps_aktiivinen": "📍 **Sijainti:** Nopeus **{nopeus} km/h**.",
+        "sulje_kartta": "Sulje kartta",
+        "nayta_kartta": "🗺️ Näytä kartta",
+        "gps_ei_aktiivinen": "ℹ️ GPS-paikannus ei ole aktiivinen.",
+        "ajoaikataulu": "📍 Ajoaikataulu",
+        "asema": "Asema",
+        "tapahtuma": "Tapahtuma",
+        "aika": "Aika",
+        "raide": "Raide",
+        "myoh_min": "Myöh (min)",
+        "juna_ei_loydy": "Junan {nro} tietoja ei löytynyt.",
+        "laiturinaytto_otsikko": "📺 Laiturinäyttö – {asema}",
+        "laiturinaytto_sub": "Aseman reaaliaikainen aikataulunäyttö.",
+        "tab_lahtevat": "🚂 Lähtevät",
+        "tab_saapuvat": "📥 Saapuvat",
+        "ei_lahtevia": "Ei lähteviä junia.",
+        "ei_saapuvia": "Ei saapuvia junia.",
+        "ladataan": "Ladataan asematietoja...",
+        "peruttu": "Peruttu ❌",
+        "reittihaku_otsikko": "🗺️ Reittihaku: **{lahto}** ➔ **{paikka}** ({pvm})",
+        "reitti_poikkeus_varoitus": "⚠️ **Huomio!** Valitsemallesi reitille tai sen asemille on kirjattu poikkeuksia tai ratatöitä:",
+        "reitti_ok": "✅ Ei tiedossa olevia poikkeuksia tai ratatöitä tällä reitillä.",
+        "rataetaisyys": "📏 **Rataetäisyys-arvio:** ~{km} km (Linnuntie {linnu} km)",
+        "saa_maaranpaassa": "🌤️ **Sää määränpäässä ({asema}):** {lampo}°C",
+        "valitse_junavuoro": "Valitse alta haluamasi junavuoro:",
+        "haetaan_junia": "Haetaan junavuoroja...",
+        "ei_junia_pvm": "Valitsemallesi päivälle ei löytynyt junavuoroja rajapinnasta.",
+        "reitin_junat_kartalla": "🗺️ Reitin junat kartalla",
+        "aikataulussa": "Aikataulussa ✅",
+        "historia_info": "📊 Viime päivinä keskimäärin +{min} min myöhässä",
+        "historia_ei_tietoa": "📊 Historiatietoa ei saatavilla",
+        "matka_kesto": "⏱️ Matka-aika: ~{kesto} min | Keskinopeusarvio: ~{nopeus} km/h",
+        "osta_liput": "🛒 Osta liput VR:ltä",
+        "seuraa_live": "📡 Seuraa live / tiedot ({nro})",
+    },
+    "English": {
+        "page_title": "Raidetutka – Real-time Train Tracker, Schedules & Traffic Disruptions",
+        "sidebar_hallinta": "🚆 Raidetutka Control",
+        "live_paivitys": "🔄 Automatic live refresh (15s)",
+        "hairiot_otsikko": "🚨 Railway Disruptions",
+        "ei_hairioita": "No known railway traffic disruptions.",
+        "ratatyot_otsikko": "🚧 Road/Track Works & Speed Limits",
+        "ei_ratatoita": "No active track works or speed restrictions.",
+        "reitti_seuranta": "🎛️ Route & Tracking",
+        "seuratut_junat": "⭐ Tracked Trains",
+        "lisaa_juna_placeholder": "E.g. 67",
+        "lisaa_juna_btn": "Add train",
+        "tyhjenna_btn": "Clear",
+        "juna_lisatty": "Train {nro} added.",
+        "ei_live_paikannusta": "⏳ No live location",
+        "myohassa_txt": "⚠️ Delayed: +{min} min",
+        "ajallaan_txt": "✅ On time",
+        "avaa_seuranta": "📡 Open tracking ({nro})",
+        "suosikkireitit": "⭐ Favorite Routes",
+        "tallenna_suosikki": "❤️ Save as favorite route",
+        "reitti_tallennettu": "Route saved to favorites.",
+        "lahtoasema": "Departure station",
+        "maaranpaa": "Destination station",
+        "matkustuspäivä": "Travel date",
+        "hae_reitti": "🔍 Search route",
+        "palaute_otsikko": "💬 Feedback & Suggestions",
+        "palaute_nimi": "Name (optional)",
+        "palaute_aihe": "Category",
+        "palaute_vaihtoehdot": ["Feature Suggestion", "Bug Report", "General Feedback"],
+        "palaute_placeholder": "Write your feedback here...",
+        "laheta_palaute": "Send feedback",
+        "palaute_kiitos": "Thank you for your feedback.",
+        "palaute_virhe": "Save error: {e}",
+        "palaute_tyhja": "Please write feedback before sending.",
+        "footer": "Data: [Fintraffic / Digitraffic (CC 4.0 BY)](https://www.digitraffic.fi) & Open-Meteo.",
+        "pääotsikko": "🚆 Raidetutka",
+        "pääalaotsikko": "##### *Real-time train tracker, schedules and train compositions*",
+        "palaa_reittihakuun": "⬅️ Back to route search",
+        "seuranta_otsikko": "📡 Train **{nro}** Tracking & Composition",
+        "vaunut_otsikko": "🚃 Wagon Composition & Services",
+        "ei_vaunutietoja": "No detailed wagon information available.",
+        "ei_vaunutietoja_info": "ℹ️ Wagon composition data is not available for this train.",
+        "gps_aktiivinen": "📍 **Location:** Speed **{nopeus} km/h**.",
+        "sulje_kartta": "Close map",
+        "nayta_kartta": "🗺️ Show map",
+        "gps_ei_aktiivinen": "ℹ️ GPS location is not active.",
+        "ajoaikataulu": "📍 Timetable",
+        "asema": "Station",
+        "tapahtuma": "Event",
+        "aika": "Time",
+        "raide": "Track",
+        "myoh_min": "Delay (min)",
+        "juna_ei_loydy": "Information for train {nro} not found.",
+        "laiturinaytto_otsikko": "📺 Departure Board – {asema}",
+        "laiturinaytto_sub": "Real-time station schedule board.",
+        "tab_lahtevat": "🚂 Departures",
+        "tab_saapuvat": "📥 Arrivals",
+        "ei_lahtevia": "No departing trains.",
+        "ei_saapuvia": "No arriving trains.",
+        "ladataan": "Loading station data...",
+        "peruttu": "Cancelled ❌",
+        "reittihaku_otsikko": "🗺️ Route Search: **{lahto}** ➔ **{paikka}** ({pvm})",
+        "reitti_poikkeus_varoitus": "⚠️ **Attention!** Exceptions or track works have been reported for your selected route or stations:",
+        "reitti_ok": "✅ No known exceptions or track works on this route.",
+        "rataetaisyys": "📏 **Route distance estimate:** ~{km} km (As the crow flies {linnu} km)",
+        "saa_maaranpaassa": "🌤️ **Weather at destination ({asema}):** {lampo}°C",
+        "valitse_junavuoro": "Select your desired train below:",
+        "haetaan_junia": "Fetching train schedules...",
+        "ei_junia_pvm": "No train schedules found for the selected date.",
+        "reitin_junat_kartalla": "🗺️ Trains on the route map",
+        "aikataulussa": "On time ✅",
+        "historia_info": "📊 Past days average delay +{min} min",
+        "historia_ei_tietoa": "📊 No historical data available",
+        "matka_kesto": "⏱️ Travel time: ~{kesto} min | Avg speed estimate: ~{nopeus} km/h",
+        "osta_liput": "🛒 Buy tickets from VR",
+        "seuraa_live": "📡 Live tracking / info ({nro})",
+    },
+}
+
+# --- SIVUN PERUSASETUKSET & KIELI ---
+st.sidebar.markdown("### 🌐 Language / Kieli")
+valittu_kieli = st.sidebar.selectbox("Valitse kieli / Select language", ["Suomi", "English"])
+t = TEKSTIT[valittu_kieli]
+
 st.set_page_config(
-    page_title=(
-        "Raidetutka – Reaaliaikainen Junatutka, Aikataulut & Rataliikennehäiriöt"
-    ),
+    page_title=t["page_title"],
     page_icon="🚆",
     layout="wide",
 )
@@ -22,13 +182,10 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Raikas vaalea päätausta */
     .stApp {
         background-color: #f8f9fa;
         color: #212529;
     }
-    
-    /* Tyylitellyt kortit (Modern Cards) */
     .metric-card {
         background-color: #ffffff;
         border: 1px solid #e9ecef;
@@ -37,8 +194,6 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         margin-bottom: 12px;
     }
-    
-    /* Vaunukortti mobiiliystävällisenä */
     .wagon-card {
         background-color: #ffffff;
         border: 1px solid #dee2e6;
@@ -48,8 +203,6 @@ st.markdown(
         margin-bottom: 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
-    
-    /* Otsikoiden tyylit responsiivisiksi */
     h1 {
         font-size: 1.8rem !important;
         color: #1a1a1a !important;
@@ -62,14 +215,10 @@ st.markdown(
         font-size: 1.15rem !important;
         color: #1a1a1a !important;
     }
-    
-    /* Sivupalkin selkeytys */
     [data-testid="stSidebar"] {
         background-color: #f1f3f5;
         border-right: 1px solid #e9ecef;
     }
-    
-    /* Mobiililaitteiden painikkeiden korjaus */
     .stButton button, .stLinkButton a {
         width: 100% !important;
     }
@@ -89,9 +238,7 @@ ga_script = f"""
       gtag('js', new Date());
       gtag('config', '{GA_MEASUREMENT_ID}');
     </script>
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Raidetutka on ammattimainen junatutka VR:n reaaliaikaisilla aikatauluilla, rataliikennehäiriöillä ja live-sijainneilla." />
-    <meta name="keywords" content="junatutka, junan myöhästyminen, VR aikataulut, rataliikennehäiriöt, live junatutka" />
+    <meta name="description" content="Raidetutka is a professional train tracker with real-time VR schedules, traffic disruptions and live locations." />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 """
 components.html(ga_script, height=0, width=0)
@@ -267,53 +414,54 @@ for nimi, tiedot in asema_dict.items():
     koodi_to_nimi[tiedot["koodi"]] = nimi.split(" (")[0]
 
 # --- SIVUPALKKI & ASETUKSET ---
-st.sidebar.markdown("### 🚆 Raidetutka Hallinta")
+st.sidebar.divider()
+st.sidebar.markdown(f"### {t['sidebar_hallinta']}")
 st.sidebar.divider()
 
 live_paivitys_paalla = st.sidebar.checkbox(
-    "🔄 Automaattinen live-päivitys (15s)", value=True
+    t["live_paivitys"], value=True
 )
 if live_paivitys_paalla:
     st_autorefresh(interval=15000, key="raidetutka_live_refresh")
 
 st.sidebar.divider()
 
-st.sidebar.markdown("### 🚨 Rataliikennehäiriöt")
+st.sidebar.markdown(f"### {t['hairiot_otsikko']}")
 hairiot = hae_rautatie_hairiot()
 if hairiot:
     for h in hairiot[:3]:
-        otsikko = h.get("title", "Häiriö")
+        otsikko = h.get("title", "Disruption")
         kuvaus = h.get("ingress", "")
         st.sidebar.warning(f"**{otsikko}**\n\n{kuvaus}")
 else:
-    st.sidebar.success("Ei tiedossa olevia rataliikennehäiriöitä.")
+    st.sidebar.success(t["ei_hairioita"])
 
 st.sidebar.divider()
-st.sidebar.markdown("### 🚧 Ratatyöt & Nopeusrajoitukset")
+st.sidebar.markdown(f"### {t['ratatyot_otsikko']}")
 ratatyot = hae_ratatyot_ja_nopeusrajoitukset()
 if ratatyot:
     for tyy in ratatyot[:2]:
-        t_ots = tyy.get("title", "Ratatyö")
-        t_ing = tyy.get("ingress", "Radalla tehdään kunnossapitotöitä.")
+        t_ots = tyy.get("title", "Track Work")
+        t_ing = tyy.get("ingress", "Maintenance work on tracks.")
         st.sidebar.info(f"🛠️ **{t_ots}**\n\n{t_ing}")
 else:
-    st.sidebar.caption("Ei aktiivisia ratatöitä tai hidastuksia.")
+    st.sidebar.caption(t["ei_ratatoita"])
 
 st.sidebar.divider()
-st.sidebar.header("🎛️ Reitti & Seuranta")
+st.sidebar.header(t["reitti_seuranta"])
 
-st.sidebar.markdown("### ⭐ Seuratut junat")
+st.sidebar.markdown(f"### {t['seuratut_junat']}")
 seurattava_input = st.sidebar.text_input(
-    "Lisää junanumero seurantaan", placeholder="Esim. 67"
+    t["seuratut_junat"], placeholder=t["lisaa_juna_placeholder"], label_visibility="collapsed"
 )
 col_lisaa, col_poista = st.sidebar.columns(2)
 with col_lisaa:
-    if st.button("Lisää juna", use_container_width=True):
+    if st.button(t["lisaa_juna_btn"], use_container_width=True):
         if seurattava_input and seurattava_input not in st.session_state.seuratut_junat:
             st.session_state.seuratut_junat.append(seurattava_input)
-            st.success(f"Juna {seurattava_input} lisätty.")
+            st.success(t["juna_lisatty"].format(nro=seurattava_input))
 with col_poista:
-    if st.button("Tyhjennä", use_container_width=True):
+    if st.button(t["tyhjenna_btn"], use_container_width=True):
         st.session_state.seuratut_junat = []
         st.session_state.valittu_live_juna = None
         st.rerun()
@@ -322,13 +470,13 @@ for j_nro in st.session_state.seuratut_junat:
     juna_info = hae_junan_perustiedot(j_nro)
     sijainti = hae_junan_sijainti(j_nro)
 
-    t_tyyppi = "Juna"
-    lahto_asema = "Lähtö"
-    paate_asema = "Määränpää"
+    t_tyyppi = "Train" if valittu_kieli == "English" else "Juna"
+    lahto_asema = "Departure" if valittu_kieli == "English" else "Lähtö"
+    paate_asema = "Destination" if valittu_kieli == "English" else "Määränpää"
     myohassa_min = 0
 
     if juna_info:
-        t_tyyppi = juna_info.get("trainType", "Juna")
+        t_tyyppi = juna_info.get("trainType", t_tyyppi)
         taulukko = juna_info.get("timeTableRows", [])
         if taulukko:
             lahto_koodi = taulukko[0].get("stationShortCode")
@@ -347,17 +495,17 @@ for j_nro in st.session_state.seuratut_junat:
 
     if sijainti:
         kmh = round(sijainti["nopeus"] * 3.6)
-        st.sidebar.markdown(f"🟢 Nopeus: **{kmh} km/h**")
+        st.sidebar.markdown(f"🟢 Speed: **{kmh} km/h**" if valittu_kieli == "English" else f"🟢 Nopeus: **{kmh} km/h**")
     else:
-        st.sidebar.markdown("⏳ Ei live-paikannusta")
+        st.sidebar.markdown(t["ei_live_paikannusta"])
 
     if myohassa_min > 0:
-        st.sidebar.error(f"⚠️ Myöhässä: +{myohassa_min} min")
+        st.sidebar.error(t["myohassa_txt"].format(min=myohassa_min))
     else:
-        st.sidebar.success("✅ Ajallaan")
+        st.sidebar.success(t["ajallaan_txt"])
 
     if st.sidebar.button(
-        f"📡 Avaa seuranta ({j_nro})",
+        t["avaa_seuranta"].format(nro=j_nro),
         key=f"live_btn_{j_nro}",
         use_container_width=True,
     ):
@@ -367,7 +515,7 @@ for j_nro in st.session_state.seuratut_junat:
     st.sidebar.divider()
 
 if st.session_state.suosikit:
-    st.sidebar.markdown("### ⭐ Suosikkireitit")
+    st.sidebar.markdown(f"### {t['suosikkireitit']}")
     for idx, (s_lahto, s_paikka) in enumerate(st.session_state.suosikit):
         if st.sidebar.button(
             f"{s_lahto} ➔ {s_paikka}",
@@ -389,27 +537,27 @@ oletus_paikka_idx = (
 )
 
 valittu_lahto_nimi = st.sidebar.selectbox(
-    "Lähtöasema", asema_nimet, index=oletus_lahto_idx
+    t["lahtoasema"], asema_nimet, index=oletus_lahto_idx
 )
 valittu_paikka_nimi = st.sidebar.selectbox(
-    "Määränpää", asema_nimet, index=oletus_paikka_idx
+    t["maaranpaa"], asema_nimet, index=oletus_paikka_idx
 )
 
 if st.sidebar.button(
-    "❤️ Tallenna suosikkireitiksi", use_container_width=True
+    t["tallenna_suosikki"], use_container_width=True
 ):
     uusi_suosikki = (valittu_lahto_nimi, valittu_paikka_nimi)
     if uusi_suosikki not in st.session_state.suosikit:
         st.session_state.suosikit.append(uusi_suosikki)
-        st.sidebar.success("Reitti tallennettu suosikkeihin.")
+        st.sidebar.success(t["reitti_tallennettu"])
 
-valittu_pvm = st.sidebar.date_input("Matkustuspäivä", value=date.today())
+valittu_pvm = st.sidebar.date_input(t["matkustuspäivä"], value=date.today())
 
 lahto = asema_dict[valittu_lahto_nimi]["koodi"]
 paikka = asema_dict[valittu_paikka_nimi]["koodi"]
 
 hakunappi = st.sidebar.button(
-    "🔍 Hae reitti", type="primary", use_container_width=True
+    t["hae_reitti"], type="primary", use_container_width=True
 )
 
 if hakunappi:
@@ -418,25 +566,22 @@ if hakunappi:
 
 # --- PALAUTELOMAKE SIVUPALKISSA ---
 st.sidebar.divider()
-st.sidebar.markdown("### 💬 Palaute & Kehitysehdotukset")
+st.sidebar.markdown(f"### {t['palaute_otsikko']}")
 
 with st.sidebar.form("palaute_lomake"):
-    kayttajan_nimi = st.text_input("Nimi (valinnainen)")
+    kayttajan_nimi = st.text_input(t["palaute_nimi"])
     palaute_tyyppi = st.selectbox(
-        "Aihealue",
-        [
-            "Kehitysehdotus",
-            "Virheilmoitus / Bugi",
-            "Yleinen palaute",
-        ],
+        t["palaute_aihe"],
+        t["palaute_vaihtoehdot"],
     )
     palaute_teksti = st.text_area(
-        "Palaute",
-        placeholder="Kirjoita palautteesi tähän...",
+        "Feedback",
+        placeholder=t["palaute_placeholder"],
+        label_visibility="collapsed",
     )
 
     laheta_palaute = st.form_submit_button(
-        "Lähetä palaute", use_container_width=True
+        t["laheta_palaute"], use_container_width=True
     )
 
     if laheta_palaute:
@@ -444,7 +589,7 @@ with st.sidebar.form("palaute_lomake"):
             aikaleima = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             rivi = [
                 aikaleima,
-                kayttajan_nimi if kayttajan_nimi else "Anonyymi",
+                kayttajan_nimi if kayttajan_nimi else "Anonymous",
                 palaute_tyyppi,
                 palaute_teksti,
             ]
@@ -456,25 +601,20 @@ with st.sidebar.form("palaute_lomake"):
                 ) as f:
                     kirjoittaja = csv.writer(f)
                     if not file_exists:
-                        kirjoittaja.writerow(["Aikaleima", "Nimi", "Tyyppi", "Palaute"])
+                        kirjoittaja.writerow(["Timestamp", "Name", "Type", "Feedback"])
                     kirjoittaja.writerow(rivi)
-                st.success("Kiitos palautestasi.")
+                st.success(t["palaute_kiitos"])
             except Exception as e:
-                st.error(f"Tallennusvirhe: {e}")
+                st.error(t["palaute_virhe"].format(e=e))
         else:
-            st.warning("Kirjoita palauteteksti ennen lähettämistä.")
+            st.warning(t["palaute_tyhja"])
 
 st.sidebar.divider()
-st.sidebar.caption(
-    "Tiedot: [Fintraffic / Digitraffic (CC 4.0 BY)](https://www.digitraffic.fi) &"
-    " Open-Meteo."
-)
+st.sidebar.caption(t["footer"])
 
 # --- PÄÄSIVU ---
-st.title("🚆 Raidetutka")
-st.markdown(
-    "##### *Reaaliaikainen junatutka, aikataulut ja vaunukoostumukset*"
-)
+st.title(t["pääotsikko"])
+st.markdown(t["pääalaotsikko"])
 st.divider()
 
 suomi_aika = ZoneInfo("Europe/Helsinki")
@@ -499,15 +639,15 @@ if st.session_state.valittu_live_juna:
     )
 
     valittu_nro = st.session_state.valittu_live_juna
-    st.markdown(f"### 📡 Junan **{valittu_nro}** Seuranta & Koostumus")
+    st.markdown(f"### 📡 Train **{valittu_nro}** Tracking & Composition" if valittu_kieli == "English" else f"### 📡 Junan **{valittu_nro}** Seuranta & Koostumus")
 
-    if st.button("⬅️ Palaa reittihakuun", use_container_width=True):
+    if st.button(t["palaa_reittihakuun"], use_container_width=True):
         st.session_state.valittu_live_juna = None
         st.rerun()
 
     juna_info = hae_junan_perustiedot(valittu_nro)
     if juna_info:
-        t_tyyppi = juna_info.get("trainType", "Juna")
+        t_tyyppi = juna_info.get("trainType", "Train")
         timeTable = juna_info.get("timeTableRows", [])
 
         lahto_koodi = timeTable[0].get("stationShortCode") if timeTable else ""
@@ -515,13 +655,13 @@ if st.session_state.valittu_live_juna:
         l_nimi = koodi_to_nimi.get(lahto_koodi, lahto_koodi)
         p_nimi = koodi_to_nimi.get(paate_koodi, paate_koodi)
 
-        st.info(f"Reitti: **{l_nimi} ➔ {p_nimi}** ({t_tyyppi})")
+        st.info(f"Route: **{l_nimi} ➔ {p_nimi}** ({t_tyyppi})" if valittu_kieli == "English" else f"Reitti: **{l_nimi} ➔ {p_nimi}** ({t_tyyppi})")
 
         # --- VAUNUKOOSTUMUS JA PALVELUT ---
         tanaan_str = date.today().strftime("%Y-%m-%d")
         koostumus_data = hae_vaunukoostumus(valittu_nro, tanaan_str)
         if koostumus_data and "journeySections" in koostumus_data:
-            st.markdown("#### 🚃 Vaunukoostumus & Palvelut")
+            st.markdown(f"#### {t['vaunut_otsikko']}")
             for section in koostumus_data.get("journeySections", []):
                 vaunut = section.get("wagons", [])
                 if vaunut:
@@ -535,47 +675,47 @@ if st.session_state.valittu_live_juna:
                     for idx, v in enumerate(vaunut):
                         col_idx = idx % len(cols)
                         with cols[col_idx]:
-                            v_tyyppi = v.get("wagonType", "Vaunu")
+                            v_tyyppi = v.get("wagonType", "Wagon")
                             v_nro = v.get("salesNumber", "-")
 
                             ikoni = "🚃"
-                            kuvaus = f"Vaunu {v_nro}"
+                            kuvaus = f"Wagon {v_nro}" if valittu_kieli == "English" else f"Vaunu {v_nro}"
 
                             if v_tyyppi == "Ed":
-                                kuvaus = f"Vaunu {v_nro} (2. luokka)"
+                                kuvaus = f"Wagon {v_nro} (2nd class)" if valittu_kieli == "English" else f"Vaunu {v_nro} (2. luokka)"
                             elif v_tyyppi == "Edfs":
                                 ikoni = "🧸"
-                                kuvaus = f"Vaunu {v_nro} (Perheosasto)"
+                                kuvaus = f"Wagon {v_nro} (Family area)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Perheosasto)"
                             elif v_tyyppi == "Edo":
                                 ikoni = "☕"
-                                kuvaus = f"Vaunu {v_nro} (Bistro)"
+                                kuvaus = f"Wagon {v_nro} (Bistro)"
                             elif v_tyyppi == "ERd" or v_tyyppi == "Rx":
                                 ikoni = "🍽️"
-                                kuvaus = f"Vaunu {v_nro} (Ravintola)"
+                                kuvaus = f"Wagon {v_nro} (Restaurant)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Ravintola)"
                             elif v_tyyppi == "Eds":
                                 ikoni = "🛋️"
-                                kuvaus = f"Vaunu {v_nro} (InterCity)"
+                                kuvaus = f"Wagon {v_nro} (InterCity)"
                             elif v_tyyppi == "CEd" or v_tyyppi == "C":
                                 ikoni = "🛏️"
-                                kuvaus = f"Vaunu {v_nro} (Makuu)"
+                                kuvaus = f"Wagon {v_nro} (Sleeping)" if valittu_kieli == "English" else f"Vaunu {v_nro} (Makuu)"
                             else:
-                                kuvaus = f"Vaunu {v_nro} ({v_tyyppi})"
+                                kuvaus = f"Wagon {v_nro} ({v_tyyppi})" if valittu_kieli == "English" else f"Vaunu {v_nro} ({v_tyyppi})"
 
                             tiedot = []
                             if v_tyyppi not in ["ERd", "Rx", "Edo"]:
                                 if v.get("luggage", False):
-                                    tiedot.append("🚲 Pyörä")
+                                    tiedot.append("🚲 Bike" if valittu_kieli == "English" else "🚲 Pyörä")
                                 if v.get("petsAllowed", False):
-                                    tiedot.append("🐾 Lemmikki")
+                                    tiedot.append("🐾 Pets" if valittu_kieli == "English" else "🐾 Lemmikki")
                                 if v.get("accessibility", False):
-                                    tiedot.append("♿ Esteetön")
+                                    tiedot.append("♿ Accessible" if valittu_kieli == "English" else "♿ Esteetön")
                             else:
-                                tiedot.append("🍽️ Ravintola")
+                                tiedot.append("🍽️ Restaurant" if valittu_kieli == "English" else "🍽️ Ravintola")
 
                             palvelut_html = (
                                 "<br>".join(tiedot)
                                 if tiedot
-                                else '<span style="color: #adb5bd;">Perusvaunu</span>'
+                                else ('<span style="color: #adb5bd;">Standard wagon</span>' if valittu_kieli == "English" else '<span style="color: #adb5bd;">Perusvaunu</span>')
                             )
 
                             st.markdown(
@@ -589,9 +729,9 @@ if st.session_state.valittu_live_juna:
                             )
                     st.markdown("---")
                 else:
-                    st.info("Ei tarkempia vaunutietoja saatavilla.")
+                    st.info(t["ei_vaunutietoja"])
         else:
-            st.caption("ℹ️ Vaunukoostumustietoja ei ole saatavilla tälle junalle.")
+            st.caption(t["ei_vaunutietoja_info"])
 
         sijainti_data = hae_junan_sijainti(valittu_nro)
         if sijainti_data:
@@ -600,34 +740,41 @@ if st.session_state.valittu_live_juna:
             j_nopeus = sijainti_data["nopeus"]
             kmh_nopeus = round(j_nopeus * 3.6)
 
-            st.success(f"📍 **Sijainti:** Nopeus **{kmh_nopeus} km/h**.")
+            st.success(t["gps_aktiivinen"].format(nopeus=kmh_nopeus))
 
             kartta_ava = f"live_{valittu_nro}"
             if kartta_ava not in st.session_state.piilotetut_kartat:
-                if st.button("Sulje kartta", key=f"sulje_{kartta_ava}", use_container_width=True):
+                if st.button(t["sulje_kartta"], key=f"sulje_{kartta_ava}", use_container_width=True):
                     st.session_state.piilotetut_kartat.add(kartta_ava)
                     st.rerun()
                 df_kartta = pd.DataFrame({"lat": [j_lat], "lon": [j_lon]})
                 st.map(df_kartta, zoom=7, use_container_width=True)
             else:
-                if st.button("🗺️ Näytä kartta", key=f"nayta_{kartta_ava}", use_container_width=True):
+                if st.button(t["nayta_kartta"], key=f"nayta_{kartta_ava}", use_container_width=True):
                     st.session_state.piilotetut_kartat.remove(kartta_ava)
                     st.rerun()
         else:
-            st.warning("ℹ️ GPS-paikannus ei ole aktiivinen.")
+            st.warning(t["gps_ei_aktiivinen"])
 
-        st.markdown("#### 📍 Ajoaikataulu")
+        st.markdown(f"#### {t['ajoaikataulu']}")
         aikataulu_rivit = []
         for rivi in timeTable:
             s_koodi = rivi.get("stationShortCode")
             if s_koodi not in koodi_to_nimi:
                 continue
             r_tyyppi = rivi.get("type")
-            r_tyyppi_suomeksi = (
-                "Lähtö"
-                if r_tyyppi == "DEPARTURE"
-                else ("Saapuminen" if r_tyyppi == "ARRIVAL" else r_tyyppi)
-            )
+            if valittu_kieli == "English":
+                r_tyyppi_kieli = (
+                    "Departure"
+                    if r_tyyppi == "DEPARTURE"
+                    else ("Arrival" if r_tyyppi == "ARRIVAL" else r_tyyppi)
+                )
+            else:
+                r_tyyppi_kieli = (
+                    "Lähtö"
+                    if r_tyyppi == "DEPARTURE"
+                    else ("Saapuminen" if r_tyyppi == "ARRIVAL" else r_tyyppi)
+                )
             a_aika = rivi.get("scheduledTime")
             ero = rivi.get("differenceInMinutes", 0)
             track = rivi.get("commercialTrack")
@@ -639,11 +786,11 @@ if st.session_state.valittu_live_juna:
                         a_aika.replace("Z", "+00:00")
                     ).astimezone(suomi_aika)
                     aikataulu_rivit.append({
-                        "Asema": koodi_to_nimi.get(s_koodi, s_koodi),
-                        "Tapahtuma": r_tyyppi_suomeksi,
-                        "Aika": dt_aika.strftime("%H:%M"),
-                        "Raide": raide,
-                        "Myöh (min)": ero,
+                        t["asema"]: koodi_to_nimi.get(s_koodi, s_koodi),
+                        t["tapahtuma"]: r_tyyppi_kieli,
+                        t["aika"]: dt_aika.strftime("%H:%M"),
+                        t["raide"]: raide,
+                        t["myoh_min"]: ero,
                     })
                 except Exception:
                     pass
@@ -651,15 +798,15 @@ if st.session_state.valittu_live_juna:
         if aikataulu_rivit:
             st.dataframe(pd.DataFrame(aikataulu_rivit), use_container_width=True, hide_index=True)
     else:
-        st.error(f"Junan {valittu_nro} tietoja ei löytynyt.")
+        st.error(t["juna_ei_loydy"].format(nro=valittu_nro))
 
     st.divider()
 
 # --- VIRALLINEN LAITURINÄYTTÖ ---
-st.markdown(f"### 📺 Laiturinäyttö – {valittu_lahto_nimi.split(' ')[0]}")
-st.caption("Aseman reaaliaikainen aikataulunäyttö.")
+st.markdown(f"### {t['laiturinaytto_otsikko'].format(asema=valittu_lahto_nimi.split(' ')[0])}")
+st.caption(t["laiturinaytto_sub"])
 
-laituri_tab1, laituri_tab2 = st.tabs(["🚂 Lähtevät", "📥 Saapuvat"])
+laituri_tab1, laituri_tab2 = st.tabs([t["tab_lahtevat"], t["tab_saapuvat"]])
 aseman_junat_data = hae_aseman_junat(lahto)
 
 with laituri_tab1:
@@ -694,16 +841,18 @@ with laituri_tab1:
                                 paateasema_koodi, paateasema_koodi
                             )
 
+                            tila_str = (
+                                t["peruttu"]
+                                if cancelled
+                                else (f"+{diff} min" if diff > 0 else ("On time 🟢" if valittu_kieli == "English" else "Ajallaan 🟢"))
+                            )
+
                             l_lahto_rivit.append({
-                                "Aika": dt.strftime("%H:%M"),
-                                "Juna": f"{t_tyyppi} {t_num}",
-                                "Määränpää": paateasema_nimi,
-                                "Raide": track_str,
-                                "Tila": (
-                                    "Peruttu ❌"
-                                    if cancelled
-                                    else (f"+{diff} min" if diff > 0 else "Ajallaan 🟢")
-                                ),
+                                ("Time" if valittu_kieli == "English" else "Aika"): dt.strftime("%H:%M"),
+                                ("Train" if valittu_kieli == "English" else "Juna"): f"{t_tyyppi} {t_num}",
+                                ("Destination" if valittu_kieli == "English" else "Määränpää"): paateasema_nimi,
+                                ("Track" if valittu_kieli == "English" else "Raide"): track_str,
+                                ("Status" if valittu_kieli == "English" else "Tila"): tila_str,
                                 "sort_aika": dt,
                             })
                         except Exception:
@@ -713,9 +862,9 @@ with laituri_tab1:
             df_lahto = pd.DataFrame(l_lahto_rivit).drop(columns=["sort_aika"])
             st.dataframe(df_lahto, use_container_width=True, hide_index=True)
         else:
-            st.info("Ei lähteviä junia.")
+            st.info(t["ei_lahtevia"])
     else:
-        st.info("Ladataan asematietoja...")
+        st.info(t["ladataan"])
 
 with laituri_tab2:
     if aseman_junat_data:
@@ -749,16 +898,18 @@ with laituri_tab2:
                                 lahtoasema_koodi, lahtoasema_koodi
                             )
 
+                            tila_str = (
+                                t["peruttu"]
+                                if cancelled
+                                else (f"+{diff} min" if diff > 0 else ("On time 🟢" if valittu_kieli == "English" else "Ajallaan 🟢"))
+                            )
+
                             l_saapuu_rivit.append({
-                                "Aika": dt.strftime("%H:%M"),
-                                "Juna": f"{t_tyyppi} {t_num}",
-                                "Lähtöpaikka": lahtoasema_nimi,
-                                "Raide": track_str,
-                                "Tila": (
-                                    "Peruttu ❌"
-                                    if cancelled
-                                    else (f"+{diff} min" if diff > 0 else "Ajallaan 🟢")
-                                ),
+                                ("Time" if valittu_kieli == "English" else "Aika"): dt.strftime("%H:%M"),
+                                ("Train" if valittu_kieli == "English" else "Juna"): f"{t_tyyppi} {t_num}",
+                                ("Origin" if valittu_kieli == "English" else "Lähtöpaikka"): lahtoasema_nimi,
+                                ("Track" if valittu_kieli == "English" else "Raide"): track_str,
+                                ("Status" if valittu_kieli == "English" else "Tila"): tila_str,
                                 "sort_aika": dt,
                             })
                         except Exception:
@@ -768,17 +919,16 @@ with laituri_tab2:
             df_saapuu = pd.DataFrame(l_saapuu_rivit).drop(columns=["sort_aika"])
             st.dataframe(df_saapuu, use_container_width=True, hide_index=True)
         else:
-            st.info("Ei saapuvia junia.")
+            st.info(t["ei_saapuvia"])
     else:
-        st.info("Ladataan asematietoja...")
+        st.info(t["ladataan"])
 
 st.divider()
 
 if st.session_state.haku_tehty:
-    st.markdown(
-        f"### 🗺️ Reittihaku: **{valittu_lahto_nimi}** ➔"
-        f" **{valittu_paikka_nimi}** ({valittu_pvm.strftime('%d.%m.%Y')})"
-    )
+    st.markdown(t["reittihaku_otsikko"].format(
+        lahto=valittu_lahto_nimi, paikka=valittu_paikka_nimi, pvm=valittu_pvm.strftime('%d.%m.%Y')
+    ))
 
     kaikki_hairiot = hae_rautatie_hairiot() + hae_ratatyot_ja_nopeusrajoitukset()
     reitti_hairiot = []
@@ -798,16 +948,11 @@ if st.session_state.haku_tehty:
             reitti_hairiot.append(h)
 
     if reitti_hairiot:
-        st.error(
-            "⚠️ **Huomio!** Valitsemallesi reitille tai sen asemille on kirjattu"
-            " poikkeuksia tai ratatöitä:"
-        )
+        st.error(t["reitti_poikkeus_varoitus"])
         for rh in reitti_hairiot[:2]:
-            st.warning(f"**{rh.get('title', 'Häiriö')}**: {rh.get('ingress', '')}")
+            st.warning(f"**{rh.get('title', 'Disruption')}**: {rh.get('ingress', '')}")
     else:
-        st.success(
-            "✅ Ei tiedossa olevia poikkeuksia tai ratatöitä tällä reitillä."
-        )
+        st.success(t["reitti_ok"])
 
     l_lat = asema_dict[valittu_lahto_nimi].get("lat")
     l_lon = asema_dict[valittu_lahto_nimi].get("lon")
@@ -816,29 +961,23 @@ if st.session_state.haku_tehty:
 
     if l_lat and l_lon and p_lat and p_lon:
         etaisyys_km = LaskeEtaisyysJaAika(l_lat, l_lon, p_lat, p_lon)
-        st.info(
-            f"📏 **Rataetäisyys-arvio:** ~{etaisyys_km} km (Linnuntie"
-            f" {round(etaisyys_km / 1.25, 1)} km)"
-        )
+        st.info(t["rataetaisyys"].format(km=etaisyys_km, linnu=round(etaisyys_km / 1.25, 1)))
 
     if p_lat and p_lon:
         try:
             sää_url = f"https://api.open-meteo.com/v1/forecast?latitude={p_lat}&longitude={p_lon}&current=temperature_2m,weather_code"
             s_vast = requests.get(sää_url, timeout=3).json()
             lampo = s_vast["current"]["temperature_2m"]
-            st.success(
-                f"🌤️ **Sää määränpäässä ({valittu_paikka_nimi.split(' ')[0]}):**"
-                f" {lampo}°C"
-            )
+            st.success(t["saa_maaranpaassa"].format(asema=valittu_paikka_nimi.split(' ')[0], lampo=lampo))
         except Exception:
             pass
 
-    st.markdown("Valitse alta haluamasi junavuoro:")
+    st.markdown(t["valitse_junavuoro"])
 
     pvm_str = valittu_pvm.strftime("%Y-%m-%d")
     url = f"https://rata.digitraffic.fi/api/v1/trains/{pvm_str}"
 
-    with st.spinner("Haetaan junavuoroja..."):
+    with st.spinner(t["haetaan_junia"]):
         try:
             vastaus = requests.get(url, timeout=10)
             junat = vastaus.json() if vastaus.status_code == 200 else []
@@ -846,7 +985,7 @@ if st.session_state.haku_tehty:
             junat = []
 
     if not isinstance(junat, list) or not junat:
-        st.warning("Valitsemallesi päivälle ei löytynyt junavuoroja rajapinnasta.")
+        st.warning(t["ei_junia_pvm"])
     else:
         aktiiviset_junat = []
         naytetyt_reitti_junat = set()
@@ -869,7 +1008,7 @@ if st.session_state.haku_tehty:
                 continue
 
             naytetyt_reitti_junat.add(j_num)
-            t_tyyppi = juna.get("trainType", "Juna")
+            t_tyyppi = juna.get("trainType", "Train")
             peruttu = juna.get("cancelled", False)
 
             lahto_aika_str = ""
@@ -933,50 +1072,70 @@ if st.session_state.haku_tehty:
             })
 
         if kartta_koordinaatit:
-            st.markdown("#### 🗺️ Reitin junat kartalla")
+            st.markdown(f"#### {t['reitin_junat_kartalla']}")
             df_reitti_kartta = pd.DataFrame(kartta_koordinaatit)
             st.map(df_reitti_kartta, zoom=6, use_container_width=True)
 
         if aktiiviset_junat:
             for j in aktiiviset_junat:
-                tila_teksti = (
-                    "Peruttu ❌"
-                    if j["peruttu"]
-                    else (
-                        f"Myöhässä +{j['myohassa']} min ⚠️"
-                        if j["myohassa"] > 0
-                        else "Aikataulussa ✅"
+                if valittu_kieli == "English":
+                    tila_teksti = (
+                        "Cancelled ❌"
+                        if j["peruttu"]
+                        else (
+                            f"Delayed +{j['myohassa']} min ⚠️"
+                            if j["myohassa"] > 0
+                            else "On time ✅"
+                        )
                     )
-                )
-
-                historia_teksti = (
-                    f"📊 Viime päivinä keskimäärin +{j['historia']} min myöhässä"
-                    if j["historia"] is not None
-                    else "📊 Historiatietoa ei saatavilla"
-                )
-                matka_info = (
-                    f"⏱️ Matka-aika: ~{j['kesto']} min | Keskinopeusarvio:"
-                    f" ~{j['keskinopeus']} km/h"
-                    if j["kesto"] > 0
-                    else ""
-                )
+                    historia_teksti = (
+                        f"📊 Past days average delay +{j['historia']} min"
+                        if j["historia"] is not None
+                        else "📊 No historical data available"
+                    )
+                    matka_info = (
+                        f"⏱️ Travel time: ~{j['kesto']} min | Avg speed estimate: ~{j['keskinopeus']} km/h"
+                        if j["kesto"] > 0
+                        else ""
+                    )
+                    lahto_perille_txt = f"Departure: {j['lahto']} ➔ Arrival: {j['perille']}"
+                else:
+                    tila_teksti = (
+                        "Peruttu ❌"
+                        if j["peruttu"]
+                        else (
+                            f"Myöhässä +{j['myohassa']} min ⚠️"
+                            if j["myohassa"] > 0
+                            else "Aikataulussa ✅"
+                        )
+                    )
+                    historia_teksti = (
+                        f"📊 Viime päivinä keskimäärin +{j['historia']} min myöhässä"
+                        if j["historia"] is not None
+                        else "📊 Historiatietoa ei saatavilla"
+                    )
+                    matka_info = (
+                        f"⏱️ Matka-aika: ~{j['kesto']} min | Keskinopeusarvio: ~{j['keskinopeus']} km/h"
+                        if j["kesto"] > 0
+                        else ""
+                    )
+                    lahto_perille_txt = f"Lähtö: {j['lahto']} ➔ Perille: {j['perille']}"
 
                 st.markdown(
-                    f"🚆 **{j['tyyppi']} {j['numero']}**\n\nLähtö: {j['lahto']} ➔"
-                    f" Perille: {j['perille']}\n{matka_info}\nTila: {tila_teksti}\n*{historia_teksti}*"
+                    f"🚆 **{j['tyyppi']} {j['numero']}**\n\n{lahto_perille_txt}\n{matka_info}\nStatus: {tila_teksti}\n*{historia_teksti}*"
                 )
 
                 col_nappi1, col_nappi2 = st.columns(2)
                 with col_nappi1:
                     vr_haku_url = f"https://www.vr.fi/matkailu?from={valittu_lahto_nimi.split(' ')[0]}&to={valittu_paikka_nimi.split(' ')[0]}&date={valittu_pvm.strftime('%Y-%m-%d')}"
                     st.link_button(
-                        "🛒 Osta liput VR:ltä",
+                        t["osta_liput"],
                         vr_haku_url,
                         use_container_width=True,
                     )
                 with col_nappi2:
                     if st.button(
-                        f"📡 Seuraa live / tiedot ({j['numero']})",
+                        t["seuraa_live"].format(nro=j['numero']),
                         key=f"reitti_live_{j['numero']}",
                         use_container_width=True,
                     ):
