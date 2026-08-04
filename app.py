@@ -337,6 +337,7 @@ for j_nro in st.session_state.seuratut_junat:
 
     if st.sidebar.button(f"📡 Avaa seuranta ({j_nro})", key=f"live_btn_{j_nro}"):
         st.session_state.valittu_live_juna = j_nro
+        st.rerun()
 
     st.sidebar.divider()
 
@@ -451,12 +452,20 @@ st.divider()
 
 suomi_aika = ZoneInfo("Europe/Helsinki")
 
+# Pakotetaan sivu heti ylös, jos live-juna on valittuna
 if st.session_state.valittu_live_juna:
-    # Lisätään skripti, joka rullaa sivun automaattisesti ylös seurannan alkuun
     components.html(
         """
         <script>
-            window.parent.document.querySelector('section.main').scrollTo({top: 0, behavior: 'smooth'});
+            function scrollToTop() {
+                const body = window.parent.document.querySelector('section.main');
+                if (body) {
+                    body.scrollTo({top: 0, behavior: 'instant'});
+                }
+                window.parent.scrollTo({top: 0, behavior: 'instant'});
+            }
+            scrollToTop();
+            setTimeout(scrollToTop, 50);
         </script>
         """,
         height=0,
