@@ -19,40 +19,47 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- MODERNIKÄYTTÖLIITTYMÄN CSS-TYYLIT ---
+# --- SKANDINAAVINEN VAALEA UI-TYYLITTELY ---
 st.markdown(
     """
     <style>
-    /* Yleinen tausta ja fonttien parannus */
+    /* Raikas vaalea päätausta */
     .stApp {
-        background-color: #0e1117;
-        color: #e0e0e0;
+        background-color: #f8f9fa;
+        color: #212529;
     }
     
-    /* Tyylitellyt kortit (Cards) */
+    /* Tyylitellyt kortit (Modern Cards) */
     .metric-card {
-        background-color: #1a1c23;
-        border: 1px solid #2d3139;
+        background-color: #ffffff;
+        border: 1px solid #e9ecef;
         padding: 20px;
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         margin-bottom: 15px;
     }
     
     /* Vaunukortti */
     .wagon-card {
-        background-color: #1e222b;
-        border: 1px solid #323842;
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
         padding: 15px;
         border-radius: 8px;
         text-align: center;
         margin-bottom: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
     
-    /* Otsikoiden ja tekstien selkeytys */
+    /* Otsikoiden tyylit */
     h1, h2, h3 {
-        color: #ffffff !important;
+        color: #1a1a1a !important;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    /* Sivupalkin selkeytys */
+    [data-testid="stSidebar"] {
+        background-color: #f1f3f5;
+        border-right: 1px solid #e9ecef;
     }
     </style>
     """,
@@ -511,12 +518,11 @@ if st.session_state.valittu_live_juna:
                             else:
                                 tiedot.append("🍽️ Ravintolapalvelut")
 
-                            # Visuaalisesti parannettu vaunukortti
                             st.markdown(
                                 f"""
                                 <div class="wagon-card">
                                     <h4>{ikoni} {kuvaus}</h4>
-                                    <p style="font-size: 0.85rem; color: #a0a0a0;">{'<br>'.join(tiedot) if tiedot else 'Vakiopaikka'}</p>
+                                    <p style="font-size: 0.85rem; color: #6c757d;">{'<br>'.join(tiedot) if tiedot else 'Vakiopaikka'}</p>
                                 </div>
                                 """,
                                 unsafe_allow_html=True,
