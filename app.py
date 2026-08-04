@@ -513,30 +513,43 @@ if st.session_state.valittu_live_juna:
                     for v in vaunut:
                         v_tyyppi = v.get("wagonType", "Vaunu")
                         v_nro = v.get("salesNumber", "-")
-                        
-                        # Fiksumpi palveluerottelu vaunutyypin mukaan
-                        attribuutit = []
                         v_lower = v_tyyppi.lower()
                         
-                        # Ravintolavaunu (esim. Restaurant car / Edfs tms.)
-                        if "restaurant" in v_lower or "ed" in v_lower:
-                            attribuutit.append("☕ Ravintolavaunu")
+                        # Tunnistetaan vaunutyyppi ja ominaisuudet fiksusti
+                        kuvaus = f"Vaunu {v_nro}"
+                        ominaisuudet = []
                         
-                        # Vaunun API-tiedot jos saatavilla
-                        if v.get("accessibility", False):
-                            attribuutit.append("♿ Esteetön (Inva)")
-                        if v.get("petsAllowed", False):
-                            attribuutit.append("🐾 Lemmikkipaikat")
-                        
-                        # Oletetaan pyöräpaikat vaunutyyppien perusteella tai jos erikseen merkitty
-                        if "bicycle" in v or "pyörä" in str(v).lower() or "bc" in v_lower:
-                            attribuutit.append("🚲 Pyöräpaikka")
+                        if v_tyyppi == "Ed":
+                            kuvaus += " (2. luokan matkustajavaunu)"
+                        elif v_tyyppi == "Edfs":
+                            kuvaus += " (Perhevaunu / Leikkipaikka)"
+                            ominaisuudet.append("🧸 Lastenleikkipaikka")
+                        elif v_tyyppi == "Edo":
+                            kuvaus += " (Ohjausvaunu / Bistro)"
+                            ominaisuudet.append("☕ Bistro-myyntipiste")
+                        elif v_tyyppi == "ERd":
+                            kuvaus += " (Ravintolavaunu)"
+                            ominaisuudet.append("🍽️ Ravintolavaunu")
+                        elif v_tyyppi == "CEd":
+                            kuvaus += " (InterCity-vaunu)"
+                        else:
+                            kuvaus += f" ({v_tyyppi})"
 
-                        vaunutyyppi_teksti = f"Vaunu {v_nro} ({v_tyyppi})"
-                        if attribuutit:
-                            vaunutyyppi_teksti += f" – *{' | '.join(attribuutit)}*"
-                        
-                        st.markdown(f"- {vaunutyyppi_teksti}")
+                        # API-tarkistukset
+                        if v.get("accessibility", False):
+                            ominaisuudet.append("♿ Inva-paikat")
+                        if v.get("petsAllowed", False):
+                            ominaisuudet.append("🐾 Lemmikkipaikat")
+                        if "bicycle" in v or "pyörä" in str(v).lower() or v_tyyppi in ["Edfs", "Ed"]:
+                            # Monissa vaunuissa on pyöräpaikkoja
+                            pass
+
+                        # Muotoillaan siisti rivi
+                         rivi_teksti = f"- **{kuvaus}**"
+                         if ominaisuudet:
+                             rivi_teksti += f" – *{' | '.join(ominaisuudet)}*"
+                         
+                         st.markdown(rivi_teksti)
                 else:
                     st.info("Ei tarkempia vaunutietoja saatavilla tälle vuorolle.")
         else:
@@ -918,7 +931,7 @@ if st.session_state.haku_tehty:
                             historia_myohassa = hae_junan_historia_luotettavuus(str(j_nro))
                             st.markdown(f"**Historiallinen myöhästymisarvio:** ~{historia_myohassa} min")
 
-                        # Vaunukoostumus ja järkevät palvelut reittituloksiin
+                        # Vaunukoostumus ja fiksut palvelut reittituloksiin
                         pvm_str = valittu_pvm.strftime("%Y-%m-%d")
                         reitti_koostumus = hae_vaunukoostumus(str(j_nro), pvm_str)
                         if reitti_koostumus and "journeySections" in reitti_koostumus:
@@ -928,20 +941,36 @@ if st.session_state.haku_tehty:
                                 if v_list:
                                     for v in v_list:
                                         v_tyyppi = v.get("wagonType", "Vaunu")
-                                        attribuutit = []
-                                        v_lower = v_tyyppi.lower()
+                                        v_nro = v.get("salesNumber", "-")
                                         
-                                        if "restaurant" in v_lower or "ed" in v_lower:
-                                            attribuutit.append("☕ Ravintolavaunu")
+                                        kuvaus = f"Vaunu {v_nro}"
+                                        ominaisuudet = []
+                                        
+                                        if v_tyyppi == "Ed":
+                                            kuvaus += " (2. luokan matkustajavaunu)"
+                                        elif v_tyyppi == "Edfs":
+                                            kuvaus += " (Perhevaunu / Leikkipaikka)"
+                                            ominaisuudet.append("🧸 Lastenleikkipaikka")
+                                        elif v_tyyppi == "Edo":
+                                            kuvaus += " (Ohjausvaunu / Bistro)"
+                                            ominaisuudet.append("☕ Bistro-myyntipiste")
+                                        elif v_tyyppi == "ERd":
+                                            kuvaus += " (Ravintolavaunu)"
+                                            ominaisuudet.append("🍽️ Ravintolavaunu")
+                                        elif v_tyyppi == "CEd":
+                                            kuvaus += " (InterCity-vaunu)"
+                                        else:
+                                            kuvaus += f" ({v_tyyppi})"
+
                                         if v.get("accessibility", False):
-                                            attribuutit.append("♿ Esteetön")
+                                            ominaisuudet.append("♿ Inva-paikat")
                                         if v.get("petsAllowed", False):
-                                            attribuutit.append("🐾 Lemmikit")
+                                            ominaisuudet.append("🐾 Lemmikkipaikat")
                                         
-                                        v_teksti = f"Vaunu {v.get('salesNumber','-')} ({v_tyyppi})"
-                                        if attribuutit:
-                                            v_teksti += f" – *{' | '.join(attribuutit)}*"
-                                        st.caption(f"- {v_teksti}")
+                                        r_teksti = f"- **{kuvaus}**"
+                                        if ominaisuudet:
+                                            r_teksti += f" – *{' | '.join(ominaisuudet)}*"
+                                        st.markdown(r_teksti)
 
                         sijainti = hae_junan_sijainti(str(j_nro))
                         if sijainti:
