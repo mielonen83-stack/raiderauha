@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
 # --- KIELIKÄÄNNÖKSET (TRANSLATIONS) ---
@@ -44,15 +45,6 @@ TEKSTIT = {
         "palaute_kiitos": "Kiitos palautestasi.",
         "palaute_virhe": "Tallennusvirhe: {e}",
         "palaute_tyhja": "Kirjoita palauteteksti ennen lähettämistä.",
-        "tietosuoja_otsikko": "🔒 Tietosuoja & Evästeet",
-        "tietosuoja_linkki": "Lue tietosuojaseloste",
-        "tietosuoja_teksti": """
-        **Tietosuojaseloste ja evästeet:**
-        - **Kerättävät tiedot:** Palautelomakkeen kautta antamasi tiedot (nimi ja palauteteksti) tallennetaan palvelimelle palvelun kehittämistä varten. Emme luovuta tietoja kolmansille osapuolille.
-        - **Evästeet:** Sivusto saattaa käyttää analytiikkaevästeitä käyttökokemuksen parantamiseen. Voit hallita evästeasetuksia selaimestasi.
-        """,
-        "evaste_banneri": "Käytämme evästeitä ja keräämme palautelomakkeen kautta annettuja tietoja palvelun tuottamiseen ja kehittämiseen.",
-        "evaste_hyvaksy": "Hyväksy evästeet",
         "footer": "Tiedot: [Fintraffic / Digitraffic (CC 4.0 BY)](https://www.digitraffic.fi) & Open-Meteo.",
         "pääotsikko": "🚆 Raidetutka",
         "pääalaotsikko": "##### *Reaaliaikainen junatutka, aikataulut ja vaunukoostumukset*",
@@ -130,15 +122,6 @@ TEKSTIT = {
         "palaute_kiitos": "Thank you for your feedback.",
         "palaute_virhe": "Save error: {e}",
         "palaute_tyhja": "Please write feedback before sending.",
-        "tietosuoja_otsikko": "🔒 Privacy & Cookies",
-        "tietosuoja_linkki": "Read privacy policy",
-        "tietosuoja_teksti": """
-        **Privacy Policy and Cookies:**
-        - **Collected Data:** Information submitted via the feedback form (name and feedback text) is stored to improve the service. We do not share data with third parties.
-        - **Cookies:** The site may use analytics cookies to improve user experience. You can manage cookie settings in your browser.
-        """,
-        "evaste_banneri": "We use cookies and collect data provided via the feedback form to operate and improve the service.",
-        "evaste_hyvaksy": "Accept cookies",
         "footer": "Data: [Fintraffic / Digitraffic (CC 4.0 BY)](https://www.digitraffic.fi) & Open-Meteo.",
         "pääotsikko": "🚆 Raidetutka",
         "pääalaotsikko": "##### *Real-time train tracker, schedules and train compositions*",
@@ -185,73 +168,344 @@ TEKSTIT = {
 }
 
 # --- SIVUN PERUSASETUKSET & KIELI ---
-st.set_page_config(
-    page_title="Raidetutka",
-    page_icon="🚆",
-    layout="wide",
-)
-
 st.sidebar.markdown("### 🌐 Language / Kieli")
 valittu_kieli = st.sidebar.selectbox("Valitse kieli / Select language", ["Suomi", "English"])
 t = TEKSTIT[valittu_kieli]
 
-# --- EVÄSTEEN HYVÄKSYNTÄ (SESSION STATE) ---
-if "evasteet_hyvaksytty" not in st.session_state:
-    st.session_state.evasteet_hyvaksytty = False
+st.set_page_config(
+    page_title=t["page_title"],
+    page_icon="🚆",
+    layout="wide",
+)
 
-if not st.session_state.evasteet_hyvaksytty:
-    st.info(f"🍪 {t['evaste_banneri']}")
-    if st.button(t["evaste_hyvaksy"], use_container_width=True):
-        st.session_state.evasteet_hyvaksytty = True
-        st.rerun()
-
-# --- MODERNI SCANDINAVIAN UI -TYYLITTELY (GRAFIIKAT & KORTIT) ---
+# --- RAIDETUTKA DESIGN SYSTEM: "LAITURINÄYTTÖ" (SPLIT-FLAP) -TEEMA ---
 st.markdown(
     """
     <style>
-    .stApp {
-        background-color: #f4f6f8;
-        color: #1e293b;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+    :root {
+        --rt-bg: #F1F3F1;
+        --rt-surface: #FFFFFF;
+        --rt-surface-alt: #E8EDEA;
+        --rt-ink: #101A18;
+        --rt-ink-muted: #57655F;
+        --rt-rail-deep: #0D2E2A;
+        --rt-rail-deep-2: #123B34;
+        --rt-amber: #E8A33D;
+        --rt-signal: #1F7A5C;
+        --rt-alert: #C1443C;
+        --rt-border: #DDE3DF;
+        --rt-radius: 10px;
+        --rt-font-display: 'Big Shoulders Display', sans-serif;
+        --rt-font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        --rt-font-mono: 'IBM Plex Mono', 'SFMono-Regular', monospace;
     }
-    .wagon-card {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        padding: 14px;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: transform 0.2s ease;
+
+    html, body, .stApp {
+        background-color: var(--rt-bg) !important;
+        color: var(--rt-ink) !important;
+        font-family: var(--rt-font-body) !important;
     }
-    .wagon-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+
+    .stApp * {
+        font-family: var(--rt-font-body);
     }
-    .train-box {
-        background: #ffffff;
-        border-left: 5px solid #0ea5e9;
-        padding: 16px;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    h1, h2, h3 {
-        color: #0f172a !important;
+
+    h1, h2, h3, h4 {
+        font-family: var(--rt-font-display) !important;
+        color: var(--rt-rail-deep) !important;
+        letter-spacing: 0.01em;
         font-weight: 700 !important;
     }
-    [data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #e2e8f0;
+    h1 {
+        font-size: clamp(1.65rem, 5vw, 2.4rem) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
     }
-    .stButton button, .stLinkButton a {
+    h2 { font-size: clamp(1.25rem, 3.6vw, 1.55rem) !important; }
+    h3, h4 { font-size: clamp(1.05rem, 3vw, 1.2rem) !important; }
+
+    h1::after {
+        content: "";
+        display: block;
+        width: 64px;
+        height: 3px;
+        background: var(--rt-amber);
+        margin-top: 6px;
+        border-radius: 2px;
+    }
+
+    .metric-card {
+        background-color: var(--rt-surface);
+        border: 1px solid var(--rt-border);
+        border-left: 3px solid var(--rt-rail-deep);
+        padding: 16px 18px;
+        border-radius: var(--rt-radius);
+        box-shadow: 0 1px 2px rgba(13, 46, 42, 0.05);
+        margin-bottom: 12px;
+    }
+    .wagon-card {
+        background-color: var(--rt-surface);
+        border: 1px solid var(--rt-border);
+        padding: 14px 10px;
+        border-radius: var(--rt-radius);
+        text-align: center;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 2px rgba(13, 46, 42, 0.04);
+        transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .wagon-card:hover {
+        border-color: var(--rt-rail-deep);
+        box-shadow: 0 3px 10px rgba(13, 46, 42, 0.08);
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: var(--rt-rail-deep) !important;
+        border-right: none;
+    }
+    [data-testid="stSidebar"] * {
+        color: #EAF2EF !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] hr {
+        border-color: rgba(234, 242, 239, 0.15) !important;
+        margin: 0.8rem 0 !important;
+    }
+    [data-testid="stSidebar"] input,
+    [data-testid="stSidebar"] textarea,
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: var(--rt-rail-deep-2) !important;
+        border: 1px solid rgba(234, 242, 239, 0.25) !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stCheckbox"] label {
+        color: #EAF2EF !important;
+    }
+
+    .stButton button, .stLinkButton a, .stFormSubmitButton button {
+        width: 100% !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
+        letter-spacing: 0.01em;
+        border: 1px solid var(--rt-border) !important;
+        transition: transform 0.08s ease, box-shadow 0.15s ease;
+        min-height: 44px;
+    }
+    .stButton button:active, .stLinkButton a:active {
+        transform: scale(0.98);
+    }
+    [data-testid="stSidebar"] .stButton button,
+    [data-testid="stSidebar"] .stLinkButton a {
+        background-color: var(--rt-rail-deep-2) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(234, 242, 239, 0.25) !important;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        border-color: var(--rt-amber) !important;
+        color: var(--rt-amber) !important;
+    }
+    button[kind="primary"], .stButton button[kind="primary"] {
+        background-color: var(--rt-amber) !important;
+        color: var(--rt-rail-deep) !important;
+        border: 1px solid var(--rt-amber) !important;
+        font-weight: 700 !important;
+    }
+    button[kind="primary"]:hover {
+        filter: brightness(1.06);
+    }
+
+    [data-testid="stTabs"] button[data-baseweb="tab"] {
+        font-family: var(--rt-font-display);
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--rt-ink-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: var(--rt-rail-deep) !important;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+        background-color: var(--rt-amber) !important;
+        height: 3px !important;
+    }
+    [data-baseweb="tab-border"] { background-color: var(--rt-border) !important; }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--rt-border);
+        border-radius: var(--rt-radius);
+        overflow: hidden;
+    }
+    [data-testid="stDataFrame"] * {
+        font-family: var(--rt-font-mono) !important;
+        font-size: 0.86rem !important;
+    }
+    [data-testid="stDataFrameResizable"] div[role="columnheader"] {
+        background-color: var(--rt-surface-alt) !important;
+        font-family: var(--rt-font-body) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.04em;
+        color: var(--rt-ink-muted) !important;
+    }
+
+    [data-testid="stAlert"] {
+        border-radius: var(--rt-radius) !important;
+        border: 1px solid transparent;
+        font-size: 0.92rem;
+    }
+    [data-testid="stAlertContentSuccess"] { color: var(--rt-signal) !important; }
+    [data-testid="stAlertContentError"] { color: var(--rt-alert) !important; }
+
+    .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div,
+    .stDateInput input {
+        border-radius: 8px !important;
+        border: 1px solid var(--rt-border) !important;
+    }
+
+    .stApp p, .stApp li, .stApp span, .stApp label {
+        color: var(--rt-ink);
+    }
+
+    .rt-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--rt-font-mono);
+        font-weight: 600;
+        font-size: 0.82rem;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--rt-border);
+        background: var(--rt-surface-alt);
+    }
+    .rt-chip.ok { color: var(--rt-signal); border-color: rgba(31,122,92,0.35); }
+    .rt-chip.warn { color: var(--rt-amber); border-color: rgba(232,163,61,0.4); }
+    .rt-chip.alert { color: var(--rt-alert); border-color: rgba(193,68,60,0.35); }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--rt-rail-deep-2); border-radius: 8px; }
+
+    @media (max-width: 640px) {
+        .block-container {
+            padding-left: 0.9rem !important;
+            padding-right: 0.9rem !important;
+            padding-top: 1.2rem !important;
+        }
+        h1::after { width: 44px; }
+        .metric-card, .wagon-card {
+            padding: 12px !important;
+        }
+        [data-testid="stDataFrame"] * {
+            font-size: 0.78rem !important;
+        }
+        .stButton button, .stLinkButton a, .stFormSubmitButton button {
+            font-size: 0.92rem !important;
+            padding: 0.6rem 0.8rem !important;
+        }
+        [data-testid="stTabs"] button[data-baseweb="tab"] {
+            font-size: 0.88rem;
+            padding: 8px 10px;
+        }
+        [data-testid="column"] {
+            min-width: 100% !important;
+            flex: 1 1 100% !important;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; animation: none !important; }
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# --- GOOGLE ANALYTICS & EVÄSTEBANNERI (COOKIE CONSENT) ---
+GA_MEASUREMENT_ID = "G-ET3PWNZCXH"
+
+cookie_banner_script = f"""
+    <script>
+      // Tarkistetaan onko evästeet jo hyväksytty
+      function checkCookieConsent() {{
+          return localStorage.getItem("raidetutka_cookie_consent");
+      }}
+
+      // Ladataan Google Analytics vain jos hyväksytty
+      function loadGoogleAnalytics() {{
+          if (window.gaLoaded) return;
+          window.gaLoaded = true;
+          
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}';
+          document.head.appendChild(script);
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){{dataLayer.push(arguments);}}
+          gtag('js', new Date());
+          gtag('config', '{GA_MEASUREMENT_ID}');
+      }}
+
+      // Luodaan evästebanneri HTML, jos ei vielä vastattu
+      function createCookieBanner() {{
+          if (checkCookieConsent()) {{
+              if (checkCookieConsent() === "accepted") {{
+                  loadGoogleAnalytics();
+              }}
+              return;
+          }}
+
+          if (document.getElementById('cookie-banner')) return;
+
+          var banner = document.createElement('div');
+          banner.id = 'cookie-banner';
+          banner.style.cssText = 'position: fixed; bottom: 0; left: 0; width: 100%; background-color: #0D2E2A; color: #FFFFFF; padding: 16px 20px; box-shadow: 0 -4px 15px rgba(0,0,0,0.2); z-index: 999999; display: flex; flex-direction: column; gap: 10px; font-family: "IBM Plex Sans", sans-serif; box-sizing: border-box;';
+          
+          var textContainer = document.div;
+          banner.innerHTML = `
+              <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 15px;">
+                  <div style="font-size: 0.9rem; line-height: 1.4; flex: 1; min-width: 280px;">
+                      🍪 Käytämme evästeitä parantaaksemme käyttökokemusta ja analysoidaksemme sivuston liikennettä (Google Analytics). Hyväksymällä evästeet autat meitä kehittämään Raidetutkaa.
+                  </div>
+                  <div style="display: flex; gap: 10px; flex-shrink: 0;">
+                      <button id="cookie-reject" style="background-color: transparent; border: 1px solid rgba(234,242,239,0.4); color: #FFFFFF; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">Vain pakolliset</button>
+                      <button id="cookie-accept" style="background-color: #E8A33D; border: none; color: #0D2E2A; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.85rem;">Hyväksy kaikki</button>
+                  </div>
+              </div>
+          `;
+
+          document.body.appendChild(banner);
+
+          document.getElementById('cookie-accept').onclick = function() {{
+              localStorage.setItem("raidetutka_cookie_consent", "accepted");
+              loadGoogleAnalytics();
+              banner.remove();
+          }};
+
+          document.getElementById('cookie-reject').onclick = function() {{
+              localStorage.setItem("raidetutka_cookie_consent", "rejected");
+              banner.remove();
+          }};
+      }}
+
+      if (document.readyState === 'complete') {{
+          createCookieBanner();
+      }} else {{
+          window.addEventListener('load', createCookieBanner);
+      }}
+    </script>
+    <meta name="description" content="Raidetutka is a professional train tracker with real-time VR schedules, traffic disruptions and live locations." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+"""
+components.html(cookie_banner_script, height=0, width=0)
 
 # --- SESSIOMUUTTUJIEN ALUSTUS ---
 if "suosikit" not in st.session_state:
@@ -619,11 +873,6 @@ with st.sidebar.form("palaute_lomake"):
         else:
             st.warning(t["palaute_tyhja"])
 
-# --- TIETOSUOJASELOSTE EXPANDER SIVUPALKISSA ---
-st.sidebar.divider()
-with st.sidebar.expander(t["tietosuoja_otsikko"]):
-    st.markdown(t["tietosuoja_teksti"])
-
 st.sidebar.divider()
 st.sidebar.caption(t["footer"])
 
@@ -634,9 +883,26 @@ st.divider()
 
 suomi_aika = ZoneInfo("Europe/Helsinki")
 
-valittu_nro = st.session_state.valittu_live_juna
+# Pakotetaan sivu heti ylös, jos live-juna on valittuna
+if st.session_state.valittu_live_juna:
+    components.html(
+        """
+        <script>
+            function scrollToTop() {
+                const body = window.parent.document.querySelector('section.main');
+                if (body) {
+                    body.scrollTo({top: 0, behavior: 'instant'});
+                }
+                window.parent.scrollTo({top: 0, behavior: 'instant'});
+            }
+            scrollToTop();
+            setTimeout(scrollToTop, 50);
+        </script>
+        """,
+        height=0,
+    )
 
-if valittu_nro:
+    valittu_nro = st.session_state.valittu_live_juna
     st.markdown(f"### 📡 Train **{valittu_nro}** Tracking & Composition" if valittu_kieli == "English" else f"### 📡 Junan **{valittu_nro}** Seuranta & Koostumus")
 
     if st.button(t["palaa_reittihakuun"], use_container_width=True):
@@ -716,14 +982,14 @@ if valittu_nro:
                             palvelut_html = (
                                 "<br>".join(tiedot)
                                 if tiedot
-                                else ('<span style="color: #94a3b8;">Standard wagon</span>' if valittu_kieli == "English" else '<span style="color: #94a3b8;">Perusvaunu</span>')
+                                else ('<span style="color: #adb5bd;">Standard wagon</span>' if valittu_kieli == "English" else '<span style="color: #adb5bd;">Perusvaunu</span>')
                             )
 
                             st.markdown(
                                 f"""
                                         <div class="wagon-card">
-                                            <div style="font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: #0f172a;">{ikoni} {kuvaus}</div>
-                                            <div style="font-size: 0.85rem; color: #475569; line-height: 1.4;">{palvelut_html}</div>
+                                            <div style="font-weight: bold; font-size: 0.95rem; margin-bottom: 3px;">{ikoni} {kuvaus}</div>
+                                            <div style="font-size: 0.8rem; color: #495057;">{palvelut_html}</div>
                                         </div>
                                         """,
                                 unsafe_allow_html=True,
@@ -1123,16 +1389,7 @@ if st.session_state.haku_tehty:
                     lahto_perille_txt = f"Lähtö: {j['lahto']} ➔ Perille: {j['perille']}"
 
                 st.markdown(
-                    f"""
-                    <div class="train-box">
-                        <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 6px;">🚆 {j['tyyppi']} {j['numero']}</div>
-                        <div style="font-size: 0.95rem; color: #334155; margin-bottom: 4px;">{lahto_perille_txt}</div>
-                        <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 4px;">{matka_info}</div>
-                        <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 4px;">Status: {tila_teksti}</div>
-                        <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">{historia_teksti}</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
+                    f"🚆 **{j['tyyppi']} {j['numero']}**\n\n{lahto_perille_txt}\n{matka_info}\nStatus: {tila_tekstri if 'tila_tekstri' in locals() else tila_teksti}\n*{historia_teksti}*"
                 )
 
                 col_nappi1, col_nappi2 = st.columns(2)
